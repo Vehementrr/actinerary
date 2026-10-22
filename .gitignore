@@ -1,1 +1,17 @@
+# Mac
 .DS_Store
+
+# Real secrets. None of these should ever exist in this project, but if one does, git won't pick it up.
+*service-account*.json
+*serviceAccount*.json
+*-firebase-adminsdk-*.json
+*.pem
+*.key
+.env
+.env.*
+
+# Firebase CLI
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log

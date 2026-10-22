@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Actionary</title>
+<meta name="description" content="Your day, sorted and ready for action.">
+<meta name="theme-color" content="#f5f6f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141816" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Actionary">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Schibsted+Grotesk:wght@600;800&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="screen-loading" class="center">
+  <div class="card"><div class="brand"><h1>Actionary</h1></div></div>
+</div>
+
+<div id="screen-setup" class="center" hidden>
+  <div class="card">
+    <div class="brand"><h1>Actionary</h1><p>Your day, sorted and ready for action.</p></div>
+    <p class="note">Almost there. Paste your Firebase project settings into <code>firebase-config.js</code>, then reload. The README walks through it.</p>
+  </div>
+</div>
+
+<div id="screen-signin" class="center" hidden>
+  <div class="card">
+    <div class="brand"><h1>Actionary</h1><p>Your day, sorted and ready for action.</p></div>
+    <button class="btn google-btn" id="signInBtn" type="button">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.2l7.9 6.2C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 7-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.2C1 16.6 0 20.2 0 24s1 7.4 2.7 10.8l7.9-6.2z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.2 1.5-5 2.3-8.2 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.2C6.6 42.6 14.6 48 24 48z"/></svg>
+      Sign in with Google
+    </button>
+    <p class="error" id="signInError" hidden></p>
+    <p class="note">Your lists sync between your Mac and iPhone. Google handles your password; Actionary never sees it.</p>
+  </div>
+</div>
+
+<div id="screen-app" class="app" data-view="index" hidden>
+  <aside class="sidebar">
+    <header class="brand"><h1>Actionary</h1><p>Your day, sorted and ready for action.</p></header>
+    <button class="btn primary" id="newListBtn" type="button">+ New list</button>
+    <nav class="lists" id="lists" aria-label="Your lists"></nav>
+    <footer class="account">
+      <div class="offline" id="offline" hidden>Offline. Changes will sync when you reconnect.</div>
+      <div class="who"><span id="userEmail"></span><button class="btn quiet" id="signOutBtn" type="button">Sign out</button></div>
+    </footer>
+  </aside>
+
+  <main class="editor">
+    <div class="editor-inner">
+      <div class="bar">
+        <button class="btn" id="backBtn" type="button" aria-label="Back to lists">‹ Lists</button>
+        <button class="btn primary" id="sortBtn" type="button">Sort</button>
+        <button class="btn" id="indentBtn" type="button" title="Make subtask (Tab)">→ <span class="hide-narrow">Indent</span></button>
+        <button class="btn" id="outdentBtn" type="button" title="Make main task (Shift+Tab)">← <span class="hide-narrow">Outdent</span></button>
+        <span class="spacer"></span>
+        <button class="btn quiet danger" id="deleteListBtn" type="button">Delete list</button>
+      </div>
+      <div id="confirmArea"></div>
+      <div id="bannerArea" aria-live="polite"></div>
+
+      <div class="empty" id="emptyState" hidden>
+        <p>No lists yet.</p>
+        <button class="btn primary" id="emptyNewBtn" type="button">+ New list</button>
+      </div>
+
+      <div class="paper" id="paper">
+        <input id="title" placeholder="Title" autocomplete="off" aria-label="List title">
+        <div class="list" id="list"></div>
+        <button class="btn quiet add" id="addBtn" type="button">+ New item</button>
+      </div>
+
+      <div class="help hide-narrow">
+        <div>Type a number at the start of a line to rank it, like “3 Call the bank.” Tap Sort when you're done.</div>
+        <div><kbd>Enter</kbd> new item · <kbd>Tab</kbd> make subtask · <kbd>Shift</kbd>+<kbd>Tab</kbd> back to main task · <kbd>Backspace</kbd> on an empty line deletes it</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

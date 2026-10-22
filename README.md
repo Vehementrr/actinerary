@@ -2,11 +2,7 @@
 
 *Your day, sorted and ready for action.*
 
-Actionary is a Notes-style checklist where you rank tasks by typing a number at the start of each line, then tap **Sort** to put them in sequence.
-
-## Status
-
-Prototype. A single list, saved in the browser's local storage on whichever device you open it on. There's no sync between devices yet.
+Actionary is a Notes-style checklist where you rank tasks by typing a number at the start of each line, then tap **Sort** to put them in sequence. Sign in with Google and your lists sync between your Mac and iPhone, and keep working offline.
 
 ## How it works
 
@@ -21,18 +17,117 @@ Prototype. A single list, saved in the browser's local storage on whichever devi
 
 ### Subtasks
 
-- One level deep. `Tab` / `Shift+Tab` on desktop, or the Indent / Outdent buttons.
+- One level deep. `Tab` / `Shift+Tab` on a Mac, or the → / ← buttons.
 - Subtasks follow the same rules, scoped to their parent, and sort independently under it.
 - A main task can't be checked while it has open subtasks (they're highlighted red).
 - Checking the last open subtask auto-checks the main task.
 - A completed main task locks its subtasks. Unchecking it pauses auto-check until a subtask is added or unchecked and all subtasks are checked again.
 
-## Running it
+### Lists
 
-It's a single static file with no build step. Open `index.html` in any browser.
+- Make as many lists as you like. Each one is saved until you delete it.
+- On a Mac, lists are in the sidebar. On an iPhone, tap a list to open it and **‹ Lists** to go back.
+
+## Project layout
+
+```
+public/              The app (this is what gets hosted)
+  index.html         Page structure
+  styles.css         Look and layout
+  app.js             Screens, editing, and saving
+  logic.js           The sorting and checking rules (no Firebase, easy to test)
+  store.js           Google sign-in and syncing with Firestore
+  firebase-config.js Your Firebase project's public settings
+  sw.js              Lets the app open offline
+  manifest.webmanifest, icons/   Home-screen / Dock install
+firestore.rules      Who may read and write data (only you, your own lists)
+firebase.json        Hosting and rules settings for the Firebase CLI
+```
+
+## Security
+
+- **No secrets in this repo.** `firebase-config.js` holds your project's public settings. They identify the project; they don't grant access. Every visitor's browser sees them anyway.
+- **Your password never touches Actionary.** You sign in on Google's own page. The app gets a short-lived token that's stored on your device and renewed automatically.
+- **The database rules do the protecting.** `firestore.rules` lets a signed-in user read and write only `users/{their id}/lists`. Google's servers enforce this; editing the app can't get around it.
+- **Never add a service account key** (a JSON file containing `"private_key"`). Actionary doesn't need one. `.gitignore` blocks the usual filenames as a backstop.
+
+## Setup (one time)
+
+You need a Google account and [Node.js](https://nodejs.org) (the LTS version) installed on your Mac.
+
+### 1. Create the Firebase project
+
+1. Go to [console.firebase.google.com](https://console.firebase.google.com) and click **Create a project**. Name it `actionary`. You can turn Google Analytics off.
+2. Note the **Project ID** it shows (for example `actionary-1a2b3`). You'll use it below.
+3. Stay on the free **Spark** plan. Don't add billing.
+
+### 2. Register the web app and copy its settings
+
+1. In the project overview, click the web icon **`</>`** to add a web app. Nickname: `Actionary`. Leave the Hosting checkbox off.
+2. Firebase shows a `firebaseConfig = { ... }` block. Copy its six values into `public/firebase-config.js`, replacing the `PASTE_...` placeholders.
+
+### 3. Turn on Google sign-in
+
+**Build → Authentication → Get started → Sign-in method → Google → Enable**, choose your support email, and **Save**.
+
+### 4. Create the database
+
+**Build → Firestore Database → Create database**. Pick a location near you, then choose **production mode** (locked). Don't choose test mode. The deploy step below replaces the default rules with `firestore.rules`.
+
+### 5. Install the Firebase command-line tool and connect this folder
+
+In Terminal, from this project's folder:
+
+```
+npm install -g firebase-tools
+firebase login
+firebase use --add
+```
+
+`firebase use --add` lists your projects. Pick `actionary` and type `default` as the alias. It creates a `.firebaserc` file holding only your project ID, which is safe to commit.
+
+### 6. Deploy
+
+```
+firebase deploy --only hosting,firestore:rules
+```
+
+When it finishes, open **`https://YOUR-PROJECT-ID.firebaseapp.com`** and sign in. Use the `firebaseapp.com` address, not the `web.app` one (the app redirects there anyway; it's the address Google sign-in is set up for).
+
+### 7. Install it as an app
+
+- **iPhone:** open the address in Safari → Share → **Add to Home Screen**.
+- **Mac:** open the address in Safari → File → **Add to Dock**.
+
+### 8. Check the rules (recommended)
+
+In **Firestore Database → Rules → Rules Playground**:
+
+- Simulate a **get** on `users/someone-else/lists/x` while **not authenticated**. It should be **denied**.
+- Simulate a **get** on `users/abc/lists/x`, authenticated with UID `abc`. It should be **allowed**.
+
+### 9. Lock the API key to your site (recommended)
+
+In [Google Cloud Console](https://console.cloud.google.com) → your project → **APIs & Services → Credentials**, open the **Browser key (auto created by Firebase)**. Under **Application restrictions**, choose **Websites** and add:
+
+```
+https://YOUR-PROJECT-ID.firebaseapp.com/*
+http://localhost:5050/*
+```
+
+Save. If sign-in stops working, double-check these addresses.
+
+## Making changes
+
+1. Edit files in `public/`.
+2. Try it locally with `firebase emulators:start --only hosting` and open `http://localhost:5050`. (This uses your real database, not a test one.)
+3. In `public/sw.js`, bump `VERSION` (for example `actionary-v2`) so devices fetch the new files.
+4. Commit and push to GitHub, then run `firebase deploy --only hosting,firestore:rules`.
+
+Installed apps pick up a new version the next time they're opened, sometimes the time after.
 
 ## Roadmap
 
-- Multiple lists, each saved until deleted
-- Sync between iPhone and Mac
-- Installable home-screen app (PWA)
+- Search across lists
+- Reorder lists in the sidebar
+- Optional: an MCP server so an AI assistant can add and rank tasks

@@ -1,0 +1,17 @@
+rules_version = '2';
+
+// Each person's lists live under users/{their account id}/lists.
+// A request is allowed only when it comes from a signed-in user whose account id matches that folder.
+// Everything else, including anyone who isn't signed in, is refused by Google's servers.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId}/lists/{listId} {
+      allow read, delete: if request.auth != null && request.auth.uid == userId;
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['title', 'items', 'createdAt', 'updatedAt'])
+        && request.resource.data.title is string
+        && request.resource.data.items is list;
+    }
+  }
+}
