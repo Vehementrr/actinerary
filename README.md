@@ -68,11 +68,11 @@ You need a Google account and [Node.js](https://nodejs.org) (the LTS version) in
 
 ### 3. Turn on Google sign-in
 
-**Build → Authentication → Get started → Sign-in method → Google → Enable**, choose your support email, and **Save**.
+**Security → Authentication → Get started → Sign-in providers → Google → Enable**, choose your support email, and **Save**.
 
 ### 4. Create the database
 
-**Build → Firestore Database → Create database**. Pick a location near you, then choose **production mode** (locked). Don't choose test mode. The deploy step below replaces the default rules with `firestore.rules`.
+**Databases & Storage → Firestore → Create database**. Pick a location near you, then choose **production mode** (locked). Don't choose test mode. The deploy step below replaces the default rules with `firestore.rules`.
 
 ### 5. Install the Firebase command-line tool and connect this folder
 
@@ -96,15 +96,28 @@ When it finishes, open **`https://YOUR-PROJECT-ID.firebaseapp.com`** and sign in
 
 ### 7. Install it as an app
 
-- **iPhone:** open the address in Safari → Share → **Add to Home Screen**.
-- **Mac:** open the address in Safari → File → **Add to Dock**.
+- **iPhone:** open the address in Safari → click … → Share → **Add to Home Screen** → Add.
+- **Mac:**
+  - Safari: open the address in Safari → File → **Add to Dock**.
+  - Chrome: open the address in Chrome → Click on small install icon (computer screen with down arrow) on right side of address bar
 
 ### 8. Check the rules (recommended)
 
 In **Firestore Database → Rules → Rules Playground**:
 
-- Simulate a **get** on `users/someone-else/lists/x` while **not authenticated**. It should be **denied**.
-- Simulate a **get** on `users/abc/lists/x`, authenticated with UID `abc`. It should be **allowed**.
+- Test 1: Non-authenticated user
+  - Set Simulation Type to **get**
+  - Set Location to `users/someone-else/lists/x`
+  - Set **authenticated** to off
+  - Click Run
+  - Expected result: Simulated read denied
+- Test 2: Authenticated user
+  - Set Simulation Type to **get**
+  - Set Location to `users/abc/lists/x`
+  - Set authenticated to on
+  - Set Provider to `google.com` and Firebase UID as `abc`
+  - Click Run
+  - Expected result: Simulated read allowed
 
 ### 9. Lock the API key to your site (recommended)
 
@@ -112,10 +125,13 @@ In [Google Cloud Console](https://console.cloud.google.com) → your project →
 
 ```
 https://YOUR-PROJECT-ID.firebaseapp.com/*
+https://YOUR-PROJECT-ID.web.app/*
 http://localhost:5050/*
 ```
 
-Save. If sign-in stops working, double-check these addresses.
+Save.
+
+Open App on desktop and refresh with CMD+R. Test to see app is still working as expected.
 
 ## Making changes
 
