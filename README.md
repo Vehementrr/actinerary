@@ -144,6 +144,7 @@ Installed apps pick up a new version the next time they're opened, sometimes the
 
 ## Roadmap
 
+- Template creation with date auto-generation
 - Search across lists
 - Reorder lists in the sidebar
 - Optional: an MCP server so an AI assistant can add and rank tasks
