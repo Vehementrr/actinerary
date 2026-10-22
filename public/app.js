@@ -10,9 +10,18 @@ const LAST = 'actinerary.lastList';
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
 
-// Sign-in is set up for the firebaseapp.com address; send the web.app twin there.
-if (location.hostname.endsWith('.web.app')) {
-  location.replace(location.href.replace('.web.app', '.firebaseapp.com'));
+// actinerary.app is the main address. Browser tabs on the old Firebase addresses go there.
+// Apps installed from an old address keep working there and show a note about the new one.
+const OLD_HOSTS = ['actionary-b6dff.web.app', 'actionary-b6dff.firebaseapp.com'];
+const installedApp = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+if (OLD_HOSTS.includes(location.hostname) && !installedApp) {
+  location.replace('https://actinerary.app' + location.pathname + location.search + location.hash);
+}
+if (OLD_HOSTS.includes(location.hostname) && installedApp) {
+  addEventListener('DOMContentLoaded', () => {
+    const n = document.getElementById('movedNote');
+    if (n) n.hidden = false;
+  });
 }
 
 let store = null;
