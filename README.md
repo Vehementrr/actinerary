@@ -96,10 +96,11 @@ When it finishes, open **`https://YOUR-PROJECT-ID.firebaseapp.com`** and sign in
 
 ### 7. Install it as an app
 
-- **iPhone:** open the address in Safari → click … → Share → **Add to Home Screen** → Add.
+- **iPhone:** open the address in Safari → click … → Share → **Add to Home Screen** → Add → Sign in with your Google account
+- **Android:** open the address in Chrome → tap ⋮ → **Add to Home screen** (or **Install app**) → Install → Sign in with your Google account
 - **Mac:**
-  - Safari: open the address in Safari → File → **Add to Dock**.
-  - Chrome: open the address in Chrome → Click on small install icon (computer screen with down arrow) on right side of address bar
+  - Safari: open the address in Safari → File → **Add to Dock** → Sign in with your Google account
+  - Chrome: open the address in Chrome → Click on small install icon (computer screen with down arrow) on right side of address bar → Sign in with your Google account
 
 ### 8. Check the rules (recommended)
 
