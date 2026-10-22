@@ -1,6 +1,6 @@
-// Lets Actionary open without a connection. Your lists themselves are cached by Firestore, not here.
+// Lets Actinerary open without a connection. Your lists themselves are cached by Firestore, not here.
 // Bump VERSION when you deploy changes so devices pick them up.
-const VERSION = 'actionary-v1';
+const VERSION = 'actinerary-v2';
 const SDK = 'https://www.gstatic.com/firebasejs/12.19.0/';
 const SHELL = [
   './', './index.html', './styles.css', './app.js', './logic.js', './store.js', './firebase-config.js',

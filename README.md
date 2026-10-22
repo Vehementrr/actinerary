@@ -1,8 +1,8 @@
-# Actionary
+# Actinerary
 
 *Your day, sorted and ready for action.*
 
-Actionary is a Notes-style checklist where you rank tasks by typing a number at the start of each line, then tap **Sort** to put them in sequence. Sign in with Google and your lists sync between your Mac and iPhone, and keep working offline.
+Actinerary is a Notes-style checklist where you rank tasks by typing a number at the start of each line, then tap **Sort** to put them in sequence. Sign in with Google and your lists sync between your Mac and iPhone, and keep working offline.
 
 ## How it works
 
@@ -47,9 +47,9 @@ firebase.json        Hosting and rules settings for the Firebase CLI
 ## Security
 
 - **No secrets in this repo.** `firebase-config.js` holds your project's public settings. They identify the project; they don't grant access. Every visitor's browser sees them anyway.
-- **Your password never touches Actionary.** You sign in on Google's own page. The app gets a short-lived token that's stored on your device and renewed automatically.
+- **Your password never touches Actinerary.** You sign in on Google's own page. The app gets a short-lived token that's stored on your device and renewed automatically.
 - **The database rules do the protecting.** `firestore.rules` lets a signed-in user read and write only `users/{their id}/lists`. Google's servers enforce this; editing the app can't get around it.
-- **Never add a service account key** (a JSON file containing `"private_key"`). Actionary doesn't need one. `.gitignore` blocks the usual filenames as a backstop.
+- **Never add a service account key** (a JSON file containing `"private_key"`). Actinerary doesn't need one. `.gitignore` blocks the usual filenames as a backstop.
 
 ## Setup (one time)
 
@@ -57,13 +57,13 @@ You need a Google account and [Node.js](https://nodejs.org) (the LTS version) in
 
 ### 1. Create the Firebase project
 
-1. Go to [console.firebase.google.com](https://console.firebase.google.com) and click **Create a project**. Name it `actionary`. You can turn Google Analytics off.
-2. Note the **Project ID** it shows (for example `actionary-1a2b3`). You'll use it below.
+1. Go to [console.firebase.google.com](https://console.firebase.google.com) and click **Create a project**. Name it `actinerary`. You can turn Google Analytics off.
+2. Note the **Project ID** it shows (for example `actinerary-1a2b3`). You'll use it below.
 3. Stay on the free **Spark** plan. Don't add billing.
 
 ### 2. Register the web app and copy its settings
 
-1. In the project overview, click the web icon **`</>`** to add a web app. Nickname: `Actionary`. Leave the Hosting checkbox off.
+1. In the project overview, click the web icon **`</>`** to add a web app. Nickname: `Actinerary`. Leave the Hosting checkbox off.
 2. Firebase shows a `firebaseConfig = { ... }` block. Copy its six values into `public/firebase-config.js`, replacing the `PASTE_...` placeholders.
 
 ### 3. Turn on Google sign-in
@@ -84,7 +84,7 @@ firebase login
 firebase use --add
 ```
 
-`firebase use --add` lists your projects. Pick `actionary` and type `default` as the alias. It creates a `.firebaserc` file holding only your project ID, which is safe to commit.
+`firebase use --add` lists your projects. Pick `actinerary` and type `default` as the alias. It creates a `.firebaserc` file holding only your project ID, which is safe to commit.
 
 ### 6. Deploy
 
@@ -138,7 +138,7 @@ Open App on desktop and refresh with CMD+R. Test to see app is still working as 
 
 1. Edit files in `public/`.
 2. Try it locally with `firebase emulators:start --only hosting` and open `http://localhost:5050`. (This uses your real database, not a test one.)
-3. In `public/sw.js`, bump `VERSION` (for example `actionary-v2`) so devices fetch the new files.
+3. In `public/sw.js`, bump `VERSION` (for example `actinerary-v2`) so devices fetch the new files.
 4. Commit and push to GitHub, then run `firebase deploy --only hosting,firestore:rules`.
 
 Installed apps pick up a new version the next time they're opened, sometimes the time after.

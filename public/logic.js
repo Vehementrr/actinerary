@@ -1,4 +1,4 @@
-// Actionary list rules. Pure functions with no DOM or Firebase, so they can be tested on their own.
+// Actinerary list rules. Pure functions with no DOM or Firebase, so they can be tested on their own.
 //
 // A list looks like:
 //   { id, title, createdAt, updatedAt, items: [ Item ] }

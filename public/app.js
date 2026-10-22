@@ -6,7 +6,7 @@ const SCREENS = ['loading', 'setup', 'signin', 'app'];
 const show = name => SCREENS.forEach(s => { $('screen-' + s).hidden = s !== name; });
 const narrow = matchMedia('(max-width: 759px)');
 const CHECK = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7.5l3 3 6-7" fill="none" stroke="var(--accent-ink)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-const LAST = 'actionary.lastList';
+const LAST = 'actinerary.lastList';
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
 
