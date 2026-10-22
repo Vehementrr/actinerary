@@ -8,12 +8,12 @@
 //
 // Paste the values from Firebase console → Project settings → Your apps → Web app → SDK setup and configuration.
 export const firebaseConfig = {
-  apiKey: 'PASTE_API_KEY',
-  authDomain: 'PASTE_PROJECT_ID.firebaseapp.com',
-  projectId: 'PASTE_PROJECT_ID',
-  storageBucket: 'PASTE_PROJECT_ID.firebasestorage.app',
-  messagingSenderId: 'PASTE_SENDER_ID',
-  appId: 'PASTE_APP_ID',
+  apiKey: 'AIzaSyArDz-9U0N_6zIXPfk273jhBdDFH4Fyu-A',
+  authDomain: 'actionary-b6dff.firebaseapp.com',
+  projectId: 'actionary-b6dff',
+  storageBucket: 'actionary-b6dff.firebasestorage.app',
+  messagingSenderId: '381264655574',
+  appId: '1:381264655574:web:b079b191376c97ed28c577',
 };
 
 export const isConfigured = !Object.values(firebaseConfig).some(v => String(v).includes('PASTE_'));
