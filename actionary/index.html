@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Actionary">
+<title>Actionary</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Schibsted+Grotesk:wght@600;800&display=swap">
+<style>
+/* Layout: one narrow paper column, sticky action bar on top, list below — like a note you work down. */
+:root {
+  --bg: #f5f6f4;
+  --paper: #ffffff;
+  --ink: #1d2320;
+  --muted: #6b746f;
+  --line: #e1e5e2;
+  --accent: #1f6b57;
+  --accent-ink: #ffffff;
+  --accent-soft: #e3efe9;
+  --err: #c0352b;
+  --err-soft: #fbe6e3;
+  --info: #8a5a00;
+  --info-soft: #fbf0d9;
+  --font-display: "Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Atkinson Hyperlegible", -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141816; --paper: #1c211f; --ink: #e8ece9; --muted: #95a09a; --line: #2e3532;
+    --accent: #5fbf9f; --accent-ink: #0f1a16; --accent-soft: #1f3a31;
+    --err: #ff7b6e; --err-soft: #3d1f1c; --info: #f0c060; --info-soft: #3a2f14;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141816; --paper: #1c211f; --ink: #e8ece9; --muted: #95a09a; --line: #2e3532;
+  --accent: #5fbf9f; --accent-ink: #0f1a16; --accent-soft: #1f3a31;
+  --err: #ff7b6e; --err-soft: #3d1f1c; --info: #f0c060; --info-soft: #3a2f14;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 17px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { max-width: 680px; margin: 0 auto; padding-block: 0 48px; }
+
+.brand { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding-block: 18px 2px; }
+.brand h1 { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 22px; letter-spacing: -.01em; color: var(--accent); }
+.brand p { margin: 0; color: var(--muted); font-size: 14px; }
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--bg); padding-block: 12px;
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+}
+.bar .spacer { flex: 1; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn {
+  min-height: 40px; padding: 0 14px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--paper);
+  font-size: 15px; display: inline-flex; align-items: center; gap: 6px;
+}
+.btn:hover { border-color: var(--muted); }
+.btn.primary {
+  background: var(--accent); color: var(--accent-ink); border-color: var(--accent);
+  font-family: var(--font-display); font-weight: 800; letter-spacing: .02em; padding: 0 20px;
+}
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.quiet { background: transparent; border-color: transparent; color: var(--muted); }
+.btn.quiet:hover { color: var(--ink); border-color: var(--line); }
+
+.banner {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 10px 12px; border-radius: 10px; margin-bottom: 10px; font-size: 15px;
+}
+.banner.error { background: var(--err-soft); color: var(--err); }
+.banner.info { background: var(--info-soft); color: var(--info); }
+.banner.ok { background: var(--accent-soft); color: var(--accent); }
+.banner ul { margin: 0; padding-left: 18px; }
+.banner strong { font-weight: 700; }
+.banner .msgs { flex: 1; min-width: 0; }
+.banner button { background: none; border: 0; color: inherit; font-size: 20px; line-height: 1; padding: 0 4px; }
+
+.confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 10px 12px; border-radius: 10px; background: var(--paper); border: 1px solid var(--line); margin-bottom: 10px; font-size: 15px; }
+.confirm span { flex: 1; min-width: 180px; }
+
+.paper { background: var(--paper); border-radius: 14px; border: 1px solid var(--line); padding: 20px 18px 14px; }
+.tag { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 4px; }
+#title {
+  width: 100%; border: 0; background: transparent; color: var(--ink);
+  font-family: var(--font-display); font-weight: 800; font-size: 30px; line-height: 1.15;
+  padding: 0 0 10px; outline: none;
+}
+#title::placeholder { color: var(--muted); }
+
+.list { display: flex; flex-direction: column; }
+.group { display: flex; flex-direction: column; }
+.children { display: flex; flex-direction: column; margin-left: 34px; }
+.row {
+  display: grid; grid-template-columns: 30px 1fr auto; gap: 6px; align-items: start;
+  padding: 5px 6px; border-radius: 8px; border-bottom: 1px solid transparent;
+}
+.row + .row, .group + .group { border-top: 1px solid var(--line); }
+.children .row { border-top: 1px solid var(--line); }
+.row.flagged { background: var(--err-soft); }
+.row.flagged textarea { color: var(--err); }
+.check {
+  width: 24px; height: 24px; margin-top: 2px; border-radius: 50%;
+  border: 2px solid var(--muted); background: transparent; padding: 0;
+  display: grid; place-items: center;
+}
+.check svg { width: 14px; height: 14px; opacity: 0; }
+.row.done .check { background: var(--accent); border-color: var(--accent); }
+.row.done .check svg { opacity: 1; }
+.row.locked .check { opacity: .55; cursor: not-allowed; }
+.row textarea {
+  width: 100%; min-width: 0; border: 0; resize: none; overflow: hidden; background: transparent;
+  color: var(--ink); font: inherit; padding: 2px 0; outline: none; display: block;
+}
+.row.done textarea { color: var(--muted); }
+.flag { font-size: 12px; font-weight: 700; color: var(--err); text-transform: uppercase; letter-spacing: .06em; padding-top: 6px; white-space: nowrap; }
+
+.section-label { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 16px 6px 6px; border-top: 1px solid var(--line); margin-top: 6px; }
+.add { margin-top: 6px; align-self: flex-start; color: var(--accent); }
+.add:hover { color: var(--accent); }
+
+.help { color: var(--muted); font-size: 14px; margin-top: 14px; display: grid; gap: 4px; }
+.help kbd { font-family: inherit; font-size: 12px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: var(--paper); }
+@media (max-width: 420px) {
+  #title { font-size: 26px; }
+  .btn { padding: 0 10px; }
+  .children { margin-left: 22px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="brand">
+    <h1>Actionary</h1>
+    <p>Your day, sorted and ready for action.</p>
+  </header>
+  <div class="bar">
+    <button class="btn primary" id="sortBtn" type="button">Sort</button>
+    <button class="btn" id="indentBtn" type="button" title="Make subtask (Tab)">→ Indent</button>
+    <button class="btn" id="outdentBtn" type="button" title="Make main task (Shift+Tab)">← Outdent</button>
+    <span class="spacer"></span>
+    <button class="btn quiet" id="newBtn" type="button">New list</button>
+  </div>
+  <div id="confirmArea"></div>
+  <div id="bannerArea" aria-live="polite"></div>
+  <div class="paper">
+    <div class="tag" id="exampleTag" hidden>Example list</div>
+    <input id="title" placeholder="Title" autocomplete="off">
+    <div class="list" id="list"></div>
+    <button class="btn quiet add" id="addBtn" type="button">+ New item</button>
+  </div>
+  <div class="help">
+    <div>Type a number at the start of a line to rank it, like “3 Call the bank.” Tap Sort when you're done.</div>
+    <div><kbd>Enter</kbd> new item · <kbd>Tab</kbd> make subtask · <kbd>Shift</kbd>+<kbd>Tab</kbd> back to main task · <kbd>Backspace</kbd> on an empty line deletes it</div>
+    <div>This prototype saves in this browser only.</div>
+  </div>
+</div>
+
+<script>
+const KEY = 'actionary.v1';
+const OLD_KEY = 'rankedChecklist.v1';
+const uid = () => Math.random().toString(36).slice(2, 10);
+const num = t => { const m = /^\s*(\d+)(?=\s|$)/.exec(t || ''); return m ? parseInt(m[1], 10) : null; };
+const short = t => { const s = (t || '').trim() || 'Untitled'; return s.length > 40 ? s.slice(0, 40) + '…' : s; };
+
+function item(text, children, done) {
+  return { id: uid(), text, done: !!done, children: children || [], autoPaused: false };
+}
+function exampleList() {
+  return {
+    id: uid(), example: true, title: 'Garage cleanout',
+    items: [
+      item('3 Sort tools into keep and donate piles'),
+      item('1 Clear a path to the workbench'),
+      item('5 Haul the donate pile to the thrift store'),
+      item('2 Pull everything off the back shelves', [
+        item('2 Wipe down the shelves'),
+        item('3 Label the bins'),
+        item('1 Box up loose screws and hardware'),
+      ]),
+      item('Fix the weather seal on the garage door'),
+      item('4 Sweep and hose out the floor'),
+    ],
+  };
+}
+
+let state;
+try { state = JSON.parse(localStorage.getItem(KEY) || localStorage.getItem(OLD_KEY)); } catch (e) { state = null; }
+if (!state || !Array.isArray(state.lists) || !state.lists.length) {
+  const l = exampleList();
+  state = { lists: [l], currentId: l.id };
+}
+const list = () => state.lists.find(l => l.id === state.currentId) || state.lists[0];
+function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+let flags = {};          // id -> {kind, value}
+let banner = null;       // {type, title, msgs}
+let focusId = null;
+let lastFocusId = null;
+
+function find(id) {
+  const items = list().items;
+  for (const it of items) {
+    if (it.id === id) return { item: it, parent: null, arr: items };
+    for (const c of it.children) if (c.id === id) return { item: c, parent: it, arr: it.children };
+  }
+  return null;
+}
+function remove(arr, it) { const i = arr.indexOf(it); if (i > -1) arr.splice(i, 1); }
+function rankKey(x) { const n = num(x.text); return n === null ? Infinity : n; }
+function placeDone(arr, it) {
+  remove(arr, it);
+  const k = rankKey(it);
+  const i = arr.findIndex(x => x.done && rankKey(x) > k);
+  if (i === -1) arr.push(it); else arr.splice(i, 0, it);
+}
+function placeOpen(arr, it) {
+  remove(arr, it);
+  const n = num(it.text);
+  let i = -1;
+  if (n !== null) i = arr.findIndex(x => x.done || num(x.text) === null || num(x.text) > n);
+  else i = arr.findIndex(x => x.done);
+  if (i === -1) arr.push(it); else arr.splice(i, 0, it);
+}
+function insertOpenEnd(arr, it) {
+  const i = arr.findIndex(x => x.done);
+  if (i === -1) arr.push(it); else arr.splice(i, 0, it);
+}
+function setBanner(type, title, msgs) { banner = { type, title, msgs: msgs || [] }; }
+
+/* ---------- checking ---------- */
+function toggle(id) {
+  const f = find(id); if (!f) return;
+  const { item: it, parent, arr } = f;
+  const top = list().items;
+  if (parent && parent.done) {
+    setBanner('error', `Uncheck “${short(parent.text)}” first to change its subtasks.`);
+    return render();
+  }
+  if (!it.done) {
+    if (!parent) {
+      const open = it.children.filter(c => !c.done);
+      if (open.length) {
+        open.forEach(c => flags[c.id] = { kind: 'open' });
+        setBanner('error', 'This task has open subtasks.', ['Check off the subtasks highlighted in red first.']);
+        return render();
+      }
+    }
+    it.done = true; delete it.grand; delete flags[it.id];
+    placeDone(arr, it);
+    if (parent && !parent.done && !parent.autoPaused && parent.children.every(c => c.done)) {
+      parent.done = true; delete parent.grand; delete flags[parent.id];
+      placeDone(top, parent);
+    }
+    if (banner && banner.type === 'error' && !Object.keys(flags).length) banner = null;
+  } else {
+    it.done = false;
+    it.grand = num(it.text); // keeps its old number even if it's below a completed one
+    placeOpen(arr, it);
+    if (!parent && it.children.length) it.autoPaused = true;
+    if (parent) parent.autoPaused = false;
+  }
+  save(); render();
+}
+
+/* ---------- sorting ---------- */
+function validate(arr, scope, errs) {
+  const byNum = new Map();
+  arr.forEach(x => { const n = num(x.text); if (n !== null) { if (!byNum.has(n)) byNum.set(n, []); byNum.get(n).push(x); } });
+  for (const [n, xs] of byNum) if (xs.length > 1) {
+    xs.forEach(x => flags[x.id] = { kind: 'dup' });
+    errs.dup.push(`#${n} is used ${xs.length} times${scope}.`);
+  }
+  const doneNums = arr.filter(x => x.done).map(x => num(x.text)).filter(n => n !== null);
+  if (doneNums.length) {
+    const max = Math.max(...doneNums);
+    arr.filter(x => !x.done).forEach(x => {
+      const n = num(x.text);
+      if (n !== null && n < max && x.grand !== n && !(flags[x.id] && flags[x.id].kind === 'dup')) {
+        flags[x.id] = { kind: 'low', value: max };
+        const m = `Number must be higher than #${max} (completed)${scope}.`;
+        if (!errs.low.includes(m)) errs.low.push(m);
+      }
+    });
+  }
+}
+function sortGroup(arr) {
+  const openNum = arr.filter(x => !x.done && num(x.text) !== null).sort((a, b) => num(a.text) - num(b.text));
+  const openNone = arr.filter(x => !x.done && num(x.text) === null);
+  const done = arr.filter(x => x.done).sort((a, b) => rankKey(a) - rankKey(b));
+  openNone.forEach(x => flags[x.id] = { kind: 'none' });
+  arr.splice(0, arr.length, ...openNum, ...openNone, ...done);
+  return openNone.length;
+}
+function sortAll() {
+  flags = {};
+  const items = list().items;
+  const errs = { dup: [], low: [] };
+  validate(items, '', errs);
+  items.forEach(it => validate(it.children, ` under “${short(it.text)}”`, errs));
+  if (errs.dup.length || errs.low.length) {
+    const msgs = [...errs.dup, ...errs.low];
+    const title = errs.dup.length ? 'Duplicate Number' : 'Number too low';
+    setBanner('error', title, [...msgs, 'Fix the items highlighted in red, then tap Sort again.']);
+    if (errs.dup.length && errs.low.length) banner.title = 'Duplicate Number';
+    return render();
+  }
+  let missing = sortGroup(items);
+  items.forEach(it => missing += sortGroup(it.children));
+  if (missing) setBanner('info', `Sorted. ${missing} item${missing > 1 ? 's have' : ' has'} no number.`, ['They’re highlighted in red at the bottom of the open items.']);
+  else setBanner('ok', 'Sorted.');
+  save(); render();
+}
+
+/* ---------- editing ---------- */
+function newAfter(id) {
+  const f = find(id); if (!f) return;
+  const { item: it, parent, arr } = f;
+  if (parent && parent.done) { setBanner('error', `Uncheck “${short(parent.text)}” first to add subtasks.`); return render(); }
+  const n = item('');
+  if (parent) { delete n.children; parent.autoPaused = false; }
+  if (it.done) insertOpenEnd(arr, n); else arr.splice(arr.indexOf(it) + 1, 0, n);
+  focusId = n.id; save(); render();
+}
+function addAtEnd() {
+  const n = item(''); insertOpenEnd(list().items, n);
+  focusId = n.id; save(); render();
+}
+function del(id) {
+  const f = find(id); if (!f) return;
+  const { item: it, parent, arr } = f;
+  if (it.children && it.children.length) return;
+  if (parent && parent.done) return;
+  const order = visibleOrder(); const i = order.indexOf(id);
+  remove(arr, it); delete flags[id];
+  focusId = order[i - 1] || order[i + 1] || null;
+  save(); render(true);
+}
+function indent(id) {
+  const f = find(id); if (!f) return;
+  const { item: it, parent } = f;
+  const top = list().items;
+  if (parent) { setBanner('info', 'Subtasks can only go one level deep.'); return render(); }
+  if (it.children.length) { setBanner('error', 'This task has its own subtasks, so it can’t become a subtask.'); return render(); }
+  const prev = top[top.indexOf(it) - 1];
+  if (!prev) { setBanner('info', 'There’s no task above this one to put it under.'); return render(); }
+  if (prev.done) { setBanner('error', `Uncheck “${short(prev.text)}” first to add subtasks to it.`); return render(); }
+  remove(top, it); delete it.children; delete it.autoPaused;
+  if (it.done) placeDone(prev.children, it); else insertOpenEnd(prev.children, it);
+  prev.autoPaused = false;
+  focusId = it.id; save(); render();
+}
+function outdent(id) {
+  const f = find(id); if (!f) return;
+  const { item: it, parent } = f;
+  if (!parent) return;
+  if (parent.done) { setBanner('error', `Uncheck “${short(parent.text)}” first to change its subtasks.`); return render(); }
+  const top = list().items;
+  remove(parent.children, it);
+  it.children = []; it.autoPaused = false;
+  if (it.done) placeDone(top, it); else top.splice(top.indexOf(parent) + 1, 0, it);
+  focusId = it.id; save(); render();
+}
+function visibleOrder() {
+  const out = [];
+  list().items.forEach(it => { out.push(it.id); it.children.forEach(c => out.push(c.id)); });
+  return out;
+}
+
+/* ---------- rendering ---------- */
+const listEl = document.getElementById('list');
+const titleEl = document.getElementById('title');
+const CHECK = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7.5l3 3 6-7" fill="none" stroke="var(--accent-ink)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+function autosize(ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
+
+function rowEl(it, parent) {
+  const row = document.createElement('div');
+  const locked = parent && parent.done;
+  const fl = flags[it.id];
+  row.className = 'row' + (it.done ? ' done' : '') + (locked ? ' locked' : '') + (fl ? ' flagged' : '');
+  row.dataset.id = it.id;
+
+  const cb = document.createElement('button');
+  cb.className = 'check'; cb.type = 'button'; cb.innerHTML = CHECK;
+  cb.setAttribute('aria-label', (it.done ? 'Uncheck ' : 'Check off ') + short(it.text));
+  cb.addEventListener('click', () => toggle(it.id));
+
+  const ta = document.createElement('textarea');
+  ta.id = 'ta-' + it.id; ta.rows = 1; ta.value = it.text; ta.spellcheck = true;
+  ta.setAttribute('aria-label', 'Item text');
+  ta.addEventListener('focus', () => { lastFocusId = it.id; });
+  ta.addEventListener('input', () => {
+    if (it.done && num(ta.value) !== num(it.text)) {
+      const pos = ta.selectionStart; ta.value = it.text; ta.selectionStart = ta.selectionEnd = Math.min(pos, ta.value.length);
+      setBanner('info', 'Completed items keep their number.', ['Uncheck it first if you need to change the number.']);
+      renderBanner(); return;
+    }
+    it.text = ta.value; autosize(ta); save();
+  });
+  ta.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); newAfter(it.id); }
+    else if (e.key === 'Tab') { e.preventDefault(); e.shiftKey ? outdent(it.id) : indent(it.id); }
+    else if (e.key === 'Backspace' && ta.value === '') { e.preventDefault(); del(it.id); }
+  });
+
+  const flag = document.createElement('span');
+  flag.className = 'flag';
+  if (fl) flag.textContent = { dup: 'Duplicate', low: `Below #${fl.value}`, none: 'No number', open: 'Open' }[fl.kind];
+
+  row.append(cb, ta, flag);
+  return row;
+}
+
+function render(focusEnd) {
+  const l = list();
+  if (document.activeElement !== titleEl) titleEl.value = l.title;
+  document.getElementById('exampleTag').hidden = !l.example;
+  listEl.innerHTML = '';
+  let doneLabelShown = false;
+  const doneCount = l.items.filter(x => x.done).length;
+  l.items.forEach(it => {
+    if (it.done && !doneLabelShown) {
+      const lab = document.createElement('div');
+      lab.className = 'section-label'; lab.textContent = `Completed · ${doneCount}`;
+      listEl.appendChild(lab); doneLabelShown = true;
+    }
+    const g = document.createElement('div'); g.className = 'group';
+    g.appendChild(rowEl(it, null));
+    if (it.children.length) {
+      const ch = document.createElement('div'); ch.className = 'children';
+      it.children.forEach(c => ch.appendChild(rowEl(c, it)));
+      g.appendChild(ch);
+    }
+    listEl.appendChild(g);
+  });
+  listEl.querySelectorAll('textarea').forEach(autosize);
+  renderBanner();
+  if (focusId) {
+    const ta = document.getElementById('ta-' + focusId);
+    if (ta) { ta.focus(); const p = ta.value.length; ta.setSelectionRange(p, p); }
+    focusId = null;
+  }
+}
+
+function renderBanner() {
+  const area = document.getElementById('bannerArea');
+  area.innerHTML = '';
+  if (!banner) return;
+  const b = document.createElement('div');
+  b.className = 'banner ' + banner.type;
+  b.setAttribute('role', banner.type === 'error' ? 'alert' : 'status');
+  const m = document.createElement('div'); m.className = 'msgs';
+  const t = document.createElement('strong'); t.textContent = banner.title; m.appendChild(t);
+  if (banner.msgs.length) {
+    const ul = document.createElement('ul');
+    banner.msgs.forEach(s => { const li = document.createElement('li'); li.textContent = s; ul.appendChild(li); });
+    m.appendChild(ul);
+  }
+  const x = document.createElement('button'); x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label', 'Dismiss');
+  x.addEventListener('click', () => { banner = null; renderBanner(); });
+  b.append(m, x); area.appendChild(b);
+}
+
+/* ---------- wiring ---------- */
+titleEl.addEventListener('input', () => { list().title = titleEl.value; save(); });
+titleEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const first = list().items[0];
+    if (first) { focusId = first.id; render(); } else addAtEnd();
+  }
+});
+document.getElementById('sortBtn').addEventListener('click', sortAll);
+document.getElementById('addBtn').addEventListener('click', addAtEnd);
+for (const [btnId, fn] of [['indentBtn', indent], ['outdentBtn', outdent]]) {
+  const b = document.getElementById(btnId);
+  b.addEventListener('mousedown', e => e.preventDefault()); // keep the cursor in the item
+  b.addEventListener('click', () => {
+    if (!lastFocusId || !find(lastFocusId)) { setBanner('info', 'Tap into an item first, then use this button.'); return renderBanner(); }
+    fn(lastFocusId);
+  });
+}
+document.getElementById('newBtn').addEventListener('click', () => {
+  const area = document.getElementById('confirmArea');
+  area.innerHTML = '';
+  const c = document.createElement('div'); c.className = 'confirm';
+  c.innerHTML = '<span>Replace this list with a blank one? This can’t be undone.</span>';
+  const yes = document.createElement('button'); yes.className = 'btn primary'; yes.type = 'button'; yes.textContent = 'Replace';
+  const no = document.createElement('button'); no.className = 'btn'; no.type = 'button'; no.textContent = 'Cancel';
+  yes.addEventListener('click', () => {
+    const l = { id: uid(), title: '', items: [] };
+    state.lists = [l]; state.currentId = l.id;
+    flags = {}; banner = null; area.innerHTML = ''; save(); render(); titleEl.focus();
+  });
+  no.addEventListener('click', () => { area.innerHTML = ''; });
+  c.append(yes, no); area.appendChild(c);
+});
+window.addEventListener('resize', () => listEl.querySelectorAll('textarea').forEach(autosize));
+render();
+</script>
+
+</body>
+</html>
