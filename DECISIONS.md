@@ -140,9 +140,16 @@ A running log of product and technical decisions for Actinerary: what was decide
 - **Options considered:** Creating a new Firebase project with a matching ID.
 - **Why:** A new project meant redoing setup and leaving existing lists behind. With actinerary.app connected and sign-in running through it, the old ID only appears in the console and config.
 
+### 19. Sign-in runs through actinerary.app
+*10/22/2026*
+
+- **Decision:** actinerary.app is the app's main address, and Google sign-in runs through it. The old Firebase addresses keep working: browser tabs there redirect to actinerary.app, and apps installed from them show a note to reinstall from actinerary.app.
+- **Options considered:** Leaving sign-in on the original firebaseapp.com address.
+- **Why:** With sign-in on the old address, the iPhone home-screen app installed from actinerary.app couldn't sign in, and Google's sign-in screen showed "continue to actionary-b6dff…", which exposed the old project ID.
+
 ## Templates and Completed Lists (specified, not yet built)
 
-### 19. Templates
+### 20. Templates
 *10/22/2026*
 
 - **Decision:**
@@ -153,7 +160,7 @@ A running log of product and technical decisions for Actinerary: what was decide
 - **Not included for now:** Two same-day lists from one template. Automatically created daily lists (needs Firebase's paid plan).
 - **Why:** Reuse a routine, like a morning routine, every day without unchecking and rechecking the same list.
 
-### 20. Completed Lists
+### 21. Completed Lists
 *10/22/2026*
 
 - **Decision:**
