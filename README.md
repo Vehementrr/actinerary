@@ -101,7 +101,7 @@ If `npm install` fails with a permission error (`EACCES`), run it again as `sudo
 firebase deploy --only hosting,firestore:rules
 ```
 
-When it finishes, open **`https://YOUR-PROJECT-ID.firebaseapp.com`** and sign in. Use the `firebaseapp.com` address, not the `web.app` one (the app redirects there anyway; it's the address Google sign-in is set up for).
+When it finishes, open your custom domain (for Actinerary, **`https://actinerary.app`**) and sign in. Before a custom domain is connected, use **`https://YOUR-PROJECT-ID.firebaseapp.com`** instead.
 
 ### 7. Install it as an app
 
@@ -137,6 +137,7 @@ In [Google Cloud Console](https://console.cloud.google.com) → your project →
 ```
 https://YOUR-PROJECT-ID.firebaseapp.com/*
 https://YOUR-PROJECT-ID.web.app/*
+https://actinerary.app/*
 http://localhost:5050/*
 ```
 
@@ -149,7 +150,7 @@ Open App on desktop and refresh with CMD+R. Test to see app is still working as 
 1. Edit files in `public/`.
 2. Try it locally with `firebase emulators:start --only hosting` and open `http://localhost:5050`. (This uses your real database, not a test one.)
 3. In `public/sw.js`, bump the number at the end of `VERSION` (for example `actinerary-v2` → `actinerary-v3`) so devices fetch the new files.
-4. Commit and push to GitHub, then run `firebase deploy --only hosting,firestore:rules`.
+4. Deploy with `firebase deploy --only hosting` (add `,firestore:rules` if the rules changed), check the live app, then commit, push, and tag.
 
 Installed apps pick up a new version the next time they're opened, sometimes the time after.
 

@@ -78,5 +78,3 @@ Colin approves each of these steps. Never deploy, push, or tag without his go-ah
 ## Current status (10/24/2026)
 
 - **Live:** v1.2 at actinerary.app.
-- **Next:** check-offs save immediately (no delay), plus a Saved / Syncing… status indicator. iPhones pause home-screen apps quickly, and changes have sat unsent until the app reopened.
-- **After that:** Templates and Completed Lists. The full spec is in `DECISIONS.md` (entries 20–21).

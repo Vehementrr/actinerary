@@ -98,7 +98,7 @@ A running log of product and technical decisions for Actinerary: what was decide
   - Database rules, enforced on Google's servers, are the real protection. The database was created in production (locked) mode, never test mode.
   - The API key is restricted to the app's own web addresses.
   - Passwords never touch the app. Sign-in happens on Google's page.
-- **Why:** Concern about credentials exposed in public repos. GitHub later flagged the Firebase key; it was reviewed and closed as a false positive, since the key is public by design and already restricted.
+- **Why:** Concern about credentials exposed in public repos. GitHub later flagged the Firebase key (10/22/2026); it was reviewed and closed as a false positive, since the key is public by design and already restricted.
 
 ### 14. Hosting on Firebase instead of GitHub Pages
 *10/21/2026*
@@ -121,7 +121,7 @@ A running log of product and technical decisions for Actinerary: what was decide
   - Use Firebase Hosting's release history to roll the live app back in seconds.
   - Keep database rules compatible with both the old and new app, so rolling back the app doesn't require rolling back the rules.
   - Make new features add data rather than rewrite it.
-  - Test new features locally against Firebase's emulators, with a fake database and fake sign-in.
+  - Test new features locally against Firebase's emulators, with a fake database and fake sign-in. (Not set up yet; needs Java.)
 - **Options considered:** Testing locally against the real database.
 - **Why:** Rollback procedures should be in place before changing production, and testing with fake data keeps real lists safe.
 
