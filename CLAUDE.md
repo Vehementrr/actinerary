@@ -4,7 +4,7 @@ Guidance for Claude when working in this repository.
 
 ## About the project
 
-Actinerary is a Notes-style checklist web app. You rank items by typing a number at the start of each line, then tap **Sort** to put them in sequence. It syncs across devices with Google sign-in and installs as an app on iPhone, Android, Mac, and PC.
+Actinerary is a Notes-style checklist web app. You rank items by typing a number in the box at the left of each line, then tap **Sort** to put them in sequence. It syncs across devices with Google sign-in and installs as an app on iPhone, Android, Mac, and PC.
 
 - Live app: https://actinerary.app
 - Repo: https://github.com/Vehementrr/actinerary
@@ -79,4 +79,4 @@ Colin approves each of these steps. Never deploy, push, or tag without his go-ah
 
 ## Current status (10/25/2026)
 
-- **Live:** v1.5 at actinerary.app.
+- **Live:** v1.6 at actinerary.app.

@@ -2,18 +2,15 @@
 
 *Your day, sorted and ready for action.*
 
-Actinerary is a Notes-style checklist where you rank tasks by typing a number at the start of each line, then tap **Sort** to put them in sequence. Sign in with Google and your lists sync across your devices (Mac, PC, iPhone, Android), and keep working offline.
+Actinerary is a Notes-style checklist where you rank tasks by typing a number in the box at the left of each line, then tap **Sort** to put them in sequence. Sign in with Google and your lists sync across your devices (Mac, PC, iPhone, Android), and keep working offline.
 
 Use it at [actinerary.app](https://actinerary.app).
 
 ## How it works
 
-- Type a whole number at the start of a line to rank it, like `3 Call the bank`. Gaps are fine.
+- Type a whole number in the box at the left of a line to rank it. Sort closes any gaps.
 - Nothing reorders until you tap **Sort**.
 - After sorting, the order is numbered open items (low to high), then unnumbered open items (highlighted red), then completed items in number order.
-- Sort refuses to run if:
-  - two items at the same level share a number ("Duplicate Number", duplicates highlighted red), or
-  - an open item has a number lower than the highest completed number at that level. An unchecked item may keep its old number.
 - Checking an item moves it to the completed section with its number unchanged. Unchecking returns it to its numbered spot among the open items.
 - Completed items' numbers are locked. Uncheck an item to change its number.
 

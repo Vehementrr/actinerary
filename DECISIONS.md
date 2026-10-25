@@ -6,6 +6,7 @@ A running log of product and technical decisions for Actinerary: what was decide
 
 ### 1. Ranking by typing a number at the start of each item
 *10/21/2026*
+*Replaced by Decision 27 on 10/25/2026.*
 
 - **Decision:** You rank an item by typing a whole number as the first characters of its text, like `4 Call the bank`.
 - **Options considered:** A separate number box at the left of each line.
@@ -20,6 +21,7 @@ A running log of product and technical decisions for Actinerary: what was decide
 
 ### 3. Every number is unique
 *10/21/2026*
+*Partly replaced by Decision 28 on 10/25/2026.*
 
 - **Decision:** No two items at the same level can share a number. Tapping Sort with a duplicate shows a "Duplicate Number" error, highlights the duplicates red, and doesn't sort.
 - **Options considered:** Blocking a duplicate the moment it's typed.
@@ -27,6 +29,7 @@ A running log of product and technical decisions for Actinerary: what was decide
 
 ### 4. The app never changes your numbers
 *10/21/2026*
+*Replaced by Decision 28 on 10/25/2026.*
 
 - **Decision:** Numbers are never renumbered, and gaps are allowed (1, 3, 7, 20 sorts fine). Checking an item off moves it to the completed section with its number unchanged.
 - **Options considered:** A renumber button to close gaps.
@@ -34,6 +37,7 @@ A running log of product and technical decisions for Actinerary: what was decide
 
 ### 5. Unnumbered items sort to the bottom and turn red
 *10/21/2026*
+*Partly replaced by Decision 29 on 10/25/2026.*
 
 - **Decision:** After Sort, unnumbered open items go below the numbered ones and above completed items, highlighted red. They don't stop the sort.
 - **Why:** So you notice the missing number and fix it.
@@ -46,6 +50,7 @@ A running log of product and technical decisions for Actinerary: what was decide
 
 ### 7. No new number lower than a completed item's
 *10/21/2026*
+*Replaced by Decision 28 on 10/25/2026.*
 
 - **Decision:** When you tap Sort, an open item numbered lower than the highest completed number is flagged red with "Number must be higher than #X (completed)." An item you uncheck keeps its original number without triggering this.
 - **Why:** The rule applies to numbers you assign, not to ones an item already had before it was completed.
@@ -202,3 +207,27 @@ A running log of product and technical decisions for Actinerary: what was decide
 
 - **Decision:** The help text is cut to "Type a number at the start of a line to rank it, and then tap Sort when you are done to sort list by rank."
 - **Why:** The app should be intuitive to use, not give people a paragraph of instructions to read.
+
+## Numbering
+
+### 27. Number box replaces typing the number in the text
+*10/25/2026*
+
+- **Decision:** Each item has a number box on the left, before the checkbox. Subtasks have their own box, and existing numbers moved into the boxes. The help text now reads "Add number to box on left side to rank item, then tap Sort to sort list by rank".
+- **Replaces:** Decision 1.
+- **Options considered:** The box between the checkbox and the text.
+- **Why:** So numbers in an item's text aren't read as priorities.
+
+### 28. Sort closes gaps
+*10/25/2026*
+
+- **Decision:** Open numbers close up on Sort, continuing after the highest completed number. Completed numbers never change, and unnumbered items never get a number. A duplicate takes that spot and pushes the others down, with the one numbered last going first. A number lower than a completed one goes first among the open items. An unchecked item keeps its old number.
+- **Replaces:** Decision 4, and the error messages in Decisions 3 and 7.
+- **Why:** Allows for easier tracking and sorting of items instead of doing it all manually. This automates numbering and sorting while editing lists making it much easier.
+
+### 29. Closing a message clears its red highlights
+*10/25/2026*
+
+- **Decision:** × clears the red highlights the message is about, and the next Sort shows them again.
+- **Replaces:** Part of Decision 5.
+- **Why:** So subtasks and unnumbered items that don't have or need numbers don't remain highlighted permanently creating a distracting eyesore on the screen.
