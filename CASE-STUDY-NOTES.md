@@ -14,3 +14,8 @@ Story moments for a future Actinerary case study: problems, surprises, and turni
 - **10/23/2026:** Check-offs on my phone weren't showing up on my laptop. Checking the database showed the phone's changes hadn't been sent yet, and they arrived after the app restarted. Fix still to be decided.
 - **10/24/2026:** Running the project's own roadmap, about 15 prioritized items, as a list in Actinerary.
 - **10/24/2026:** Moved from chat to the Claude desktop app working directly in the repo, and added CLAUDE.md so each session starts with the project's context and my working preferences.
+- **10/24/2026:** Moved the work for the app from an open chat into a Claude project, to use Claude Code and the project tools going forward.
+- **10/25/2026:** Had Claude audit the code against all four docs before building anything new. It found 9 mismatches. I reviewed them one at a time: approved most, rewrote one in my own words, and turned down two as unneeded. The fixes shipped as v1.3.
+- **10/25/2026:** Pushed back when the audit said a README step "would break sign-in for anyone rebuilding the app." Users never rebuild it, so the real risk was narrower: only someone setting up their own copy.
+- **10/25/2026:** Stopped Claude from opening a session on another device, and kept all work to the project folder on my Mac.
+- **10/25/2026:** Set up testing with a fake database and fake sign-in, using my own sample lists, so new features no longer get tried out against my real lists. Shipped as v1.4.
