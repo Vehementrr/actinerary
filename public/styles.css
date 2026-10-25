@@ -134,7 +134,7 @@ button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px
 .group + .group { border-top: 1px solid var(--line); }
 .children { display: flex; flex-direction: column; margin-left: 34px; }
 .children .row { border-top: 1px solid var(--line); border-radius: 0; }
-.row { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 6px; align-items: start; padding: 5px 6px; border-radius: 8px; }
+.row { display: grid; grid-template-columns: 2.6em 30px minmax(0, 1fr) auto; gap: 6px; align-items: start; padding: 5px 6px; border-radius: 8px; }
 .row.flagged { background: var(--err-soft); }
 .row.flagged textarea { color: var(--err); }
 .check {
@@ -150,6 +150,13 @@ button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px
   color: var(--ink); font: inherit; padding: 2px 0; outline: none; display: block;
 }
 .row.done textarea { color: var(--muted); }
+.rank {
+  width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 6px; background: transparent;
+  color: var(--ink); font: inherit; font-variant-numeric: tabular-nums; text-align: center; padding: 1px 0; margin-top: 1px;
+}
+.rank:placeholder-shown:not(:focus) { opacity: .5; }
+.row.done .rank { color: var(--muted); border-color: transparent; }
+.row.flagged .rank { border-color: var(--err); }
 .flag { font-size: 12px; font-weight: 700; color: var(--err); text-transform: uppercase; letter-spacing: .06em; padding-top: 6px; white-space: nowrap; }
 .section-label { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 16px 6px 6px; border-top: 1px solid var(--line); margin-top: 6px; }
 .add { margin-top: 6px; color: var(--accent); }

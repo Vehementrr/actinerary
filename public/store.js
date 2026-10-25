@@ -10,6 +10,7 @@ import {
   connectFirestoreEmulator, collection, doc, setDoc, deleteDoc, onSnapshot,
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
+import { toSaved } from './logic.js';
 
 // Opened at localhost, the app uses Firebase's emulators: a fake database and fake sign-in on this computer.
 // Started with `firebase emulators:start`. The live app never takes this path.
@@ -73,7 +74,7 @@ export function saveList(uid, list) {
   const { id, title, items, createdAt } = list;
   list.updatedAt = Date.now();
   return setDoc(doc(db, 'users', uid, 'lists', id), {
-    title: title || '', items, createdAt: createdAt || list.updatedAt, updatedAt: list.updatedAt,
+    title: title || '', items: toSaved(items), createdAt: createdAt || list.updatedAt, updatedAt: list.updatedAt,
   });
 }
 export const removeList = (uid, id) => deleteDoc(doc(db, 'users', uid, 'lists', id));

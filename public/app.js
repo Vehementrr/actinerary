@@ -76,8 +76,8 @@ function normalize(l) {
   l.items = Array.isArray(l.items) ? l.items : [];
   l.items.forEach(it => {
     it.children = Array.isArray(it.children) ? it.children : [];
-    it.autoPaused = !!it.autoPaused; it.done = !!it.done; it.text = it.text || '';
-    it.children.forEach(c => { c.done = !!c.done; c.text = c.text || ''; });
+    it.autoPaused = !!it.autoPaused; it.done = !!it.done; L.fromSaved(it);
+    it.children.forEach(c => { c.done = !!c.done; L.fromSaved(c); });
   });
   return l;
 }
@@ -87,8 +87,9 @@ function onLists(incoming, removed, fromCache) {
   for (const l of incoming) {
     if (timers.has(l.id)) continue; // local edits not yet saved win
     const local = lists.get(l.id);
+    normalize(l);
     if (!local || sig(local) !== sig(l)) {
-      lists.set(l.id, normalize(l));
+      lists.set(l.id, l);
       if (l.id === currentId) currentChanged = true;
     } else {
       local.updatedAt = l.updatedAt;
@@ -237,6 +238,18 @@ function rowEl(it, parent, flags) {
     apply(r);
   });
 
+  const rk = document.createElement('input');
+  rk.className = 'rank'; rk.inputMode = 'numeric'; rk.pattern = '[0-9]*'; rk.autocomplete = 'off'; rk.placeholder = ' ';
+  rk.value = it.rank ?? ''; rk.disabled = it.done; rk.dataset.rankId = it.id;
+  rk.setAttribute('aria-label', 'Number for ' + L.short(it.text));
+  rk.addEventListener('focus', () => { lastFocusId = it.id; });
+  rk.addEventListener('input', () => {
+    const v = rk.value.replace(/\D/g, ''); if (v !== rk.value) rk.value = v;
+    const r = L.setRank(cur(), it.id, v);
+    if (!r.ok) { if (r.banner) { banner = r.banner; renderBanner(); } return; }
+    touch();
+  });
+
   const ta = document.createElement('textarea');
   ta.rows = 1; ta.value = it.text; ta.dataset.itemId = it.id;
   ta.setAttribute('aria-label', parent ? 'Subtask' : 'Task');
@@ -263,9 +276,10 @@ function rowEl(it, parent, flags) {
   });
 
   const flag = document.createElement('span'); flag.className = 'flag';
-  if (fl) flag.textContent = { dup: 'Duplicate', low: `Below #${fl.value}`, none: 'No number', open: 'Open' }[fl.kind];
+  if (fl) flag.textContent = { none: 'No number', open: 'Open' }[fl.kind];
+  rk.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); ta.focus(); } });
 
-  row.append(cb, ta, flag);
+  row.append(rk, cb, ta, flag);
   return row;
 }
 
@@ -282,6 +296,7 @@ function renderEditor(keepFocus) {
   let saved = null;
   const a = document.activeElement;
   if (keepFocus && a && a.dataset && a.dataset.itemId) saved = { id: a.dataset.itemId, s: a.selectionStart, e: a.selectionEnd };
+  else if (keepFocus && a && a.dataset && a.dataset.rankId) saved = { rank: a.dataset.rankId };
 
   if (document.activeElement !== titleEl) titleEl.value = l.title || '';
   const flags = F();
@@ -311,6 +326,9 @@ function renderEditor(keepFocus) {
   if (pendingFocus) {
     const ta = focusTa(pendingFocus.id); const caret = pendingFocus.caret; pendingFocus = null;
     if (ta) { ta.focus(); const p = caret ?? ta.value.length; ta.setSelectionRange(p, p); }
+  } else if (saved && saved.rank) {
+    const rk = $('paper').querySelector(`input[data-rank-id="${saved.rank}"]`);
+    if (rk) { rk.focus(); const p = rk.value.length; rk.setSelectionRange(p, p); }
   } else if (saved) {
     const ta = focusTa(saved.id);
     if (ta) { ta.focus(); try { ta.setSelectionRange(saved.s, saved.e); } catch (e) {} }
@@ -331,7 +349,13 @@ function renderBanner() {
     m.appendChild(ul);
   }
   const x = button('×', ''); x.setAttribute('aria-label', 'Dismiss');
-  x.addEventListener('click', () => { banner = null; renderBanner(); });
+  x.addEventListener('click', () => {
+    const kind = banner.clears; banner = null;
+    if (!kind) return renderBanner();
+    const flags = F();
+    for (const id in flags) if (flags[id].kind === kind) delete flags[id];
+    renderEditor(true);
+  });
   b.append(m, x); area.appendChild(b);
 }
 

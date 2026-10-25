@@ -3,12 +3,14 @@
 // A list looks like:
 //   { id, title, createdAt, updatedAt, items: [ Item ] }
 // A main task looks like:
-//   { id, text, done, autoPaused, children: [ Subtask ] }   (grand is set while it keeps an old number)
-// A subtask is the same without children/autoPaused.
+//   { id, rank, text, done, autoPaused, children: [ Subtask ] }   (grand is set while it keeps an old number)
+// A subtask is the same without children/autoPaused. `rank` is the number in the item's number box, or null.
 //
 // Most functions take the list plus a `flags` object (item id -> { kind, value }) that drives the red
 // highlights, mutate both, and return { changed, banner, focus, caret }. `banner` undefined means "leave it".
+// A banner's `clears` names the kind of red highlight that closing it removes.
 
+// Reads a number at the start of text, the way items stored their number before v1.6.
 export const num = t => {
   const m = /^\s*(\d+)(?=\s|$)/.exec(t || '');
   return m ? parseInt(m[1], 10) : null;
@@ -24,7 +26,7 @@ export const uid = () => {
 };
 
 export function makeItem(text = '', isChild = false) {
-  const it = { id: uid(), text, done: false };
+  const it = { id: uid(), rank: null, text, done: false };
   if (!isChild) { it.children = []; it.autoPaused = false; }
   return it;
 }
@@ -51,7 +53,7 @@ export function counts(list) {
   return { open, done };
 }
 
-const rankKey = x => { const n = num(x.text); return n === null ? Infinity : n; };
+const rankKey = x => x.rank ?? Infinity;
 const remove = (arr, it) => { const i = arr.indexOf(it); if (i > -1) arr.splice(i, 1); };
 const err = (title, msgs = []) => ({ type: 'error', title, msgs });
 const info = (title, msgs = []) => ({ type: 'info', title, msgs });
@@ -64,9 +66,9 @@ function placeDone(arr, it) {
 }
 function placeOpen(arr, it) {
   remove(arr, it);
-  const n = num(it.text);
-  const i = n !== null
-    ? arr.findIndex(x => x.done || num(x.text) === null || num(x.text) > n)
+  const n = it.rank;
+  const i = n != null
+    ? arr.findIndex(x => x.done || x.rank == null || x.rank > n)
     : arr.findIndex(x => x.done);
   i === -1 ? arr.push(it) : arr.splice(i, 0, it);
 }
@@ -88,7 +90,7 @@ export function toggle(list, id, flags) {
       const open = (it.children || []).filter(c => !c.done);
       if (open.length) {
         open.forEach(c => { flags[c.id] = { kind: 'open' }; });
-        return { changed: false, banner: err('This task has open subtasks.', ['Check off the subtasks highlighted in red first.']) };
+        return { changed: false, banner: { ...err('This task has open subtasks.', ['Check off the subtasks highlighted in red first.']), clears: 'open' } };
       }
     }
     it.done = true; delete it.grand; delete flags[it.id];
@@ -101,8 +103,7 @@ export function toggle(list, id, flags) {
   }
 
   it.done = false;
-  const n = num(it.text);
-  if (n !== null) it.grand = n; else delete it.grand; // may keep its old number even if it's below a completed one
+  if (it.rank != null) it.grand = it.rank; else delete it.grand; // may keep its old number even if it's below a completed one
   placeOpen(arr, it);
   if (!parent && it.children.length) it.autoPaused = true;
   if (parent) parent.autoPaused = false;
@@ -110,66 +111,55 @@ export function toggle(list, id, flags) {
 }
 
 /* ---------- sorting ---------- */
-function validate(arr, scope, flags, errs) {
-  const byNum = new Map();
-  arr.forEach(x => { const n = num(x.text); if (n !== null) (byNum.get(n) || byNum.set(n, []).get(n)).push(x); });
-  for (const [n, xs] of byNum) if (xs.length > 1) {
-    xs.forEach(x => { flags[x.id] = { kind: 'dup' }; });
-    errs.dup.push(`#${n} is used ${xs.length} times${scope}.`);
-  }
-  const doneNums = arr.filter(x => x.done).map(x => num(x.text)).filter(n => n !== null);
-  if (!doneNums.length) return;
-  const max = Math.max(...doneNums);
-  arr.filter(x => !x.done).forEach(x => {
-    const n = num(x.text);
-    if (n !== null && n < max && x.grand !== n && !(flags[x.id] && flags[x.id].kind === 'dup')) {
-      flags[x.id] = { kind: 'low', value: max };
-      const m = `Number must be higher than #${max} (completed)${scope}.`;
-      if (!errs.low.includes(m)) errs.low.push(m);
-    }
-  });
-}
+// Open numbered items go first, then unnumbered ones (flagged red), then completed ones. Open numbers close up
+// with no gaps, continuing after the highest completed number, which never changes. An unchecked item keeps its
+// old number while it's still free. When two open items share a number, the one numbered last goes first.
 function sortGroup(arr, flags) {
-  const openNum = arr.filter(x => !x.done && num(x.text) !== null).sort((a, b) => num(a.text) - num(b.text));
-  const openNone = arr.filter(x => !x.done && num(x.text) === null);
   const done = arr.filter(x => x.done).sort((a, b) => rankKey(a) - rankKey(b));
+  const used = new Set(done.map(x => x.rank).filter(n => n != null));
+  const top = Math.max(0, ...used);
+  const open = arr.filter(x => !x.done && x.rank != null)
+    .sort((a, b) => a.rank - b.rank || (b.rankedAt || 0) - (a.rankedAt || 0));
+  let next = top + 1, renumbered = false;
+  for (const x of open) {
+    if (x.grand === x.rank && x.rank < top && !used.has(x.rank)) { used.add(x.rank); continue; }
+    while (used.has(next)) next++;
+    if (x.rank !== next) { x.rank = next; renumbered = true; }
+    used.add(next);
+  }
+  open.sort((a, b) => a.rank - b.rank);
+  const openNone = arr.filter(x => !x.done && x.rank == null);
   const missing = openNone.filter(x => x.text.trim() || (x.children || []).length);
   missing.forEach(x => { flags[x.id] = { kind: 'none' }; });
   const before = arr.map(x => x.id).join();
-  arr.splice(0, arr.length, ...openNum, ...openNone, ...done);
-  return { missing: missing.length, moved: before !== arr.map(x => x.id).join() };
+  arr.splice(0, arr.length, ...open, ...openNone, ...done);
+  return { missing: missing.length, changed: renumbered || before !== arr.map(x => x.id).join() };
 }
 // Returns fresh flags for the list.
 export function sortList(list) {
   const flags = {};
-  const errs = { dup: [], low: [] };
-  validate(list.items, '', flags, errs);
-  list.items.forEach(it => validate(it.children || [], ` under “${short(it.text)}”`, flags, errs));
-  if (errs.dup.length || errs.low.length) {
-    return {
-      changed: false, flags,
-      banner: err(errs.dup.length ? 'Duplicate Number' : 'Number too low',
-        [...errs.dup, ...errs.low, 'Fix the items highlighted in red, then tap Sort again.']),
-    };
-  }
-  let missing = 0, moved = false;
+  let missing = 0, changed = false;
   for (const arr of [list.items, ...list.items.map(it => it.children || [])]) {
-    const r = sortGroup(arr, flags); missing += r.missing; moved = moved || r.moved;
+    const r = sortGroup(arr, flags); missing += r.missing; changed = changed || r.changed;
   }
   const banner = missing
-    ? info(`Sorted. ${missing} item${missing > 1 ? 's have' : ' has'} no number.`, ['They’re highlighted in red at the bottom of the open items.'])
+    ? { ...info(`Sorted. ${missing} item${missing > 1 ? 's have' : ' has'} no number.`, ['They’re highlighted in red at the bottom of the open items.']), clears: 'none' }
     : { type: 'ok', title: 'Sorted.', msgs: [] };
-  return { changed: moved, flags, banner };
+  return { changed, flags, banner };
 }
 
 /* ---------- editing ---------- */
-// Returns { ok } or { ok:false, banner } for a text change; refuses number changes on completed items.
 export function setText(list, id, text) {
   const f = find(list, id); if (!f) return { ok: false };
-  if (f.item.done && num(text) !== num(f.item.text)) {
-    return { ok: false, banner: keepNumMsg };
-  }
   f.item.text = text;
+  return { ok: true };
+}
+// The number box. Returns { ok } or { ok:false, banner }; completed items keep their number.
+export function setRank(list, id, value) {
+  const f = find(list, id); if (!f) return { ok: false };
+  if (f.item.done) return { ok: false, banner: keepNumMsg };
+  f.item.rank = /^\d+$/.test(value) ? parseInt(value, 10) : null;
+  f.item.rankedAt = Date.now();
   return { ok: true };
 }
 // Return: the text from `end` on moves into a new item below (the text between `start` and `end` is dropped).
@@ -179,7 +169,6 @@ export function splitItem(list, id, start, end = start) {
   const { item: it, parent, arr } = f;
   if (parent && parent.done) return { changed: false, banner: err(`Uncheck “${short(parent.text)}” first to add subtasks.`) };
   const head = it.text.slice(0, start), tail = it.text.slice(end);
-  if (it.done && num(head) !== num(it.text) && end > 0) return { changed: false, banner: keepNumMsg };
   const n = makeItem('', !!parent);
   n.done = it.done;
   if (parent) parent.autoPaused = false;
@@ -206,9 +195,7 @@ export function joinPrev(list, id, flags) {
   if (above.done !== it.done || (p.parent && p.parent.done)) return { changed: false };
   if (!parent && it.done && !(p.parent || above).done) return { changed: false }; // not across + New item
   const caret = above.text.length;
-  const text = above.text + it.text;
-  if (above.done && num(text) !== num(above.text)) return { changed: false, banner: keepNumMsg };
-  above.text = text;
+  above.text += it.text;
   remove(arr, it); delete flags[id];
   return { changed: true, focus: above.id, caret };
 }
@@ -249,4 +236,26 @@ export function outdent(list, id) {
   it.children = []; it.autoPaused = false;
   it.done ? placeDone(top, it) : top.splice(top.indexOf(parent) + 1, 0, it);
   return { changed: true, focus: it.id };
+}
+
+/* ---------- saving ---------- */
+// Items are saved with their number at the start of `text` too, the way versions before v1.6 stored it, so an
+// older version still reads them correctly after a rollback. `body` holds the text without the number.
+const legacyText = (rank, body) => rank == null ? body : (body ? `${rank} ${body}` : String(rank));
+export function toSaved(items) {
+  const one = ({ text, ...rest }) => ({ ...rest, text: legacyText(rest.rank ?? null, text), body: text });
+  return items.map(it => it.children ? { ...one(it), children: it.children.map(one) } : one(it));
+}
+// Reads a saved item. Items saved before v1.6, or edited by an older version since, have their number
+// taken out of the text into `rank`.
+export function fromSaved(x) {
+  const t = x.text || '';
+  if (typeof x.body === 'string' && t === legacyText(x.rank ?? null, x.body)) {
+    x.text = x.body; x.rank = x.rank ?? null;
+  } else {
+    x.rank = num(t);
+    x.text = x.rank == null ? t : t.replace(/^\s*\d+\s*/, '');
+  }
+  delete x.body;
+  return x;
 }
