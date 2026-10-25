@@ -38,7 +38,8 @@ let lastFocusId = null;
 
 const cur = () => lists.get(currentId) || null;
 const F = () => (flagsBy[currentId] ||= {});
-const sig = l => JSON.stringify([l.title || '', l.items]);
+const sig = l => JSON.stringify([l.title || '', l.items, l.completedAt || null]);
+const viewOnly = () => !!(cur() && cur().completedAt); // completed lists can't be edited until reopened
 const store_get = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const store_set = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
 
@@ -188,7 +189,12 @@ function askDeleteList() {
 function setView(v) { $('screen-app').dataset.view = v; }
 
 /* ---------- rendering: sidebar ---------- */
-const sortedLists = () => [...lists.values()].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+// Open lists, most recently changed first, then completed lists, most recently completed first.
+const sortedLists = () => [
+  ...[...lists.values()].filter(l => !l.completedAt).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)),
+  ...[...lists.values()].filter(l => l.completedAt).sort((a, b) => b.completedAt - a.completedAt),
+];
+const DONE_OPEN = 'actinerary.completedListsOpen';
 function renderSidebar() {
   const nav = $('lists'); nav.innerHTML = '';
   const all = sortedLists();
@@ -197,7 +203,17 @@ function renderSidebar() {
     p.textContent = loaded ? 'No lists yet.' : 'Loading your lists…';
     nav.appendChild(p); return;
   }
+  const doneLists = all.filter(l => l.completedAt);
+  let doneBox = null;
   for (const l of all) {
+    if (l.completedAt && !doneBox) {
+      const open = store_get(DONE_OPEN) === '1';
+      const h = button(`${open ? '▾' : '▸'} Completed Lists · ${doneLists.length}`, 'done-lists-toggle');
+      h.setAttribute('aria-expanded', String(open));
+      h.addEventListener('click', () => { store_set(DONE_OPEN, open ? '0' : '1'); renderSidebar(); });
+      doneBox = document.createElement('div'); doneBox.hidden = !open;
+      nav.append(h, doneBox);
+    }
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'list-link';
     b.setAttribute('aria-current', String(l.id === currentId));
@@ -208,7 +224,7 @@ function renderSidebar() {
     m.textContent = `${open} open · ${done} done`;
     b.append(t, m);
     b.addEventListener('click', () => openList(l.id));
-    nav.appendChild(b);
+    (doneBox || nav).appendChild(b);
   }
 }
 
@@ -231,7 +247,7 @@ function wireDrag(rk, it, parent, row) {
       if (y < 60) scrollBy(0, -12); else if (y > innerHeight - 60) scrollBy(0, 12);
     };
     const begin = () => {
-      const l = cur(); if (!l) return stop();
+      const l = cur(); if (!l || viewOnly()) return stop();
       if (!l.sortedAt) { banner = { type: 'info', title: 'Tap Sort once to turn on dragging for this list.', msgs: [] }; renderBanner(); return stop(); }
       p.on = true; rk.blur();
       el = parent ? row : row.parentElement;
@@ -279,6 +295,7 @@ function rowEl(it, parent, flags) {
   const cb = document.createElement('button');
   cb.className = 'check'; cb.type = 'button'; cb.innerHTML = CHECK;
   cb.setAttribute('aria-label', (it.done ? 'Uncheck ' : 'Check off ') + L.short(it.text));
+  cb.disabled = viewOnly();
   cb.addEventListener('click', () => {
     const flagsNow = F();
     const r = L.toggle(cur(), it.id, flagsNow);
@@ -288,7 +305,7 @@ function rowEl(it, parent, flags) {
 
   const rk = document.createElement('input');
   rk.className = 'rank'; rk.inputMode = 'numeric'; rk.pattern = '[0-9]*'; rk.autocomplete = 'off'; rk.placeholder = ' ';
-  rk.value = it.rank ?? ''; rk.disabled = it.done; rk.dataset.rankId = it.id;
+  rk.value = it.rank ?? ''; rk.disabled = it.done || viewOnly(); rk.dataset.rankId = it.id;
   rk.setAttribute('aria-label', 'Number for ' + L.short(it.text));
   rk.addEventListener('focus', () => { lastFocusId = it.id; });
   rk.addEventListener('input', () => {
@@ -299,7 +316,7 @@ function rowEl(it, parent, flags) {
   });
 
   const ta = document.createElement('textarea');
-  ta.rows = 1; ta.value = it.text; ta.dataset.itemId = it.id;
+  ta.rows = 1; ta.value = it.text; ta.dataset.itemId = it.id; ta.readOnly = viewOnly();
   ta.setAttribute('aria-label', parent ? 'Subtask' : 'Task');
   ta.addEventListener('focus', () => { lastFocusId = it.id; });
   ta.spellcheck = true; ta.setAttribute('autocorrect', 'on');
@@ -313,10 +330,10 @@ function rowEl(it, parent, flags) {
       if (r.banner) { banner = r.banner; renderBanner(); }
       return;
     }
-    autosize(ta); touch();
+    autosize(ta); touch(); syncCompleteBtn();
   });
   ta.addEventListener('keydown', e => {
-    if (e.isComposing) return;
+    if (e.isComposing || ta.readOnly) return;
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); apply(L.splitItem(cur(), it.id, ta.selectionStart, ta.selectionEnd)); }
     else if (e.key === 'Tab') { e.preventDefault(); apply(e.shiftKey ? L.outdent(cur(), it.id) : L.indent(cur(), it.id)); }
     else if (e.key === 'Backspace' && ta.value === '') { e.preventDefault(); apply(L.deleteEmpty(cur(), it.id, F())); }
@@ -333,13 +350,20 @@ function rowEl(it, parent, flags) {
   return row;
 }
 
+function syncCompleteBtn() {
+  const l = cur(), b = $('completeBtn'), ro = viewOnly();
+  b.textContent = ro ? 'Reopen list' : 'Complete List';
+  b.disabled = !l || (!ro && !L.allChecked(l));
+}
 function renderEditor(keepFocus) {
   const l = cur();
   const titleEl = $('title');
   const has = !!l;
   $('emptyState').hidden = has || !loaded;
   $('paper').hidden = !has;
-  ['sortBtn', 'indentBtn', 'outdentBtn', 'deleteListBtn'].forEach(id => { $(id).disabled = !has; });
+  ['sortBtn', 'indentBtn', 'outdentBtn', 'deleteListBtn'].forEach(id => { $(id).disabled = !has || (id !== 'deleteListBtn' && viewOnly()); });
+  syncCompleteBtn();
+  $('title').readOnly = viewOnly(); $('addBtn').hidden = viewOnly();
   if (!has) { $('list').innerHTML = ''; $('doneList').innerHTML = ''; renderBanner(); return; }
 
   // Remember where the cursor was so a re-render (e.g. a change from another device) doesn't lose it.
@@ -439,6 +463,14 @@ $('sortBtn').addEventListener('click', () => {
   apply({ changed: r.changed, banner: r.banner });
 });
 $('addBtn').addEventListener('click', () => { const l = cur(); if (l) apply(L.addAtEnd(l)); });
+$('completeBtn').addEventListener('click', () => {
+  const l = cur(); if (!l) return;
+  if (l.completedAt) l.completedAt = null;
+  else if (L.allChecked(l)) l.completedAt = Date.now();
+  else return;
+  banner = null; touch(l.id); flush(l.id);
+  renderSidebar(); renderEditor();
+});
 $('title').addEventListener('input', e => {
   const l = cur(); if (!l) return;
   capFirst($('title'), l.title || '', e);

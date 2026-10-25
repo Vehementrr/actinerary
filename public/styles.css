@@ -91,6 +91,7 @@ button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px
 .list-link .t.untitled { color: var(--muted); font-weight: 400; font-style: italic; }
 .list-link .m { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .lists .none { color: var(--muted); font-size: 14px; padding: 8px 10px; }
+.done-lists-toggle { text-align: left; background: transparent; border: 0; color: var(--muted); font: inherit; font-size: 13px; font-weight: 700; padding: 14px 10px 6px; }
 .account { display: grid; gap: 6px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; }
 .account .who { display: flex; align-items: center; gap: 6px; }
 .account .who span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -53,6 +53,12 @@ export function counts(list) {
   return { open, done };
 }
 
+// Complete List turns on once every item is checked (blank lines don't count).
+export function allChecked(list) {
+  const { open, done } = counts(list);
+  return open === 0 && done > 0;
+}
+
 const rankKey = x => x.rank ?? Infinity;
 const remove = (arr, it) => { const i = arr.indexOf(it); if (i > -1) arr.splice(i, 1); };
 const err = (title, msgs = []) => ({ type: 'error', title, msgs });

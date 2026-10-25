@@ -71,10 +71,10 @@ export function watchLists(uid, cb, onError) {
 
 // Writes are queued locally first, so these never wait for the network.
 export function saveList(uid, list) {
-  const { id, title, items, createdAt, sortedAt } = list;
+  const { id, title, items, createdAt, sortedAt, completedAt } = list;
   list.updatedAt = Date.now();
   return setDoc(doc(db, 'users', uid, 'lists', id), {
-    title: title || '', items: toSaved(items), createdAt: createdAt || list.updatedAt, updatedAt: list.updatedAt, sortedAt,
+    title: title || '', items: toSaved(items), createdAt: createdAt || list.updatedAt, updatedAt: list.updatedAt, sortedAt, completedAt,
   });
 }
 export const removeList = (uid, id) => deleteDoc(doc(db, 'users', uid, 'lists', id));
