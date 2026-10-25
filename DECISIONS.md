@@ -169,3 +169,36 @@ A running log of product and technical decisions for Actinerary: what was decide
   - Completed lists are view-only until you tap **Reopen list**.
 - **Options considered:** Completing a list automatically when the last item is checked.
 - **Why:** Marking a list complete by hand is more satisfying, and it keeps dated daily lists from piling up in the main list.
+
+## Editing
+
+### 22. Completed items sit below + New item
+*10/25/2026*
+
+- **Decision:** The **+ New item** button sits between the open items and the completed section.
+- **Why:** You shouldn't have to scroll past completed items to find the button to add a new item. It should be easily available at the bottom of the open items.
+
+### 23. Return splits an item
+*10/25/2026*
+
+- **Decision:** Return splits an item at the cursor, and at the very start it adds a blank item above. It works the same on completed items, and the split-off part stays completed. Backspace at the start joins an item onto the one above, only between two open or two completed items, and never on a main task with subtasks.
+- **Why:** If an item needs to be split into two, or if one starts a new item on an existing line, return should be sufficient to move the inline text to a new item instead of having to delete and re-type text. Return doesn’t need to work differently for completed items.
+
+### 24. Only the first character is capitalized
+*10/25/2026*
+
+- **Decision:** The first letter typed into an empty item, subtask, or list title is capitalized. The letter after a number never is. Pasted text and existing items don't change.
+- **Options considered:** Capitalizing the first letter after the number.
+- **Why:** Items are usually typed first and numbered later, and some start with a number that isn't a rank.
+
+### 25. Spell check and autocorrect come from the device
+*10/25/2026*
+
+- **Decision:** Spell check and autocorrect are turned on for items and titles and follow each device's own settings.
+- **Why:** Spelling mistakes should be highlighted the same way as in the other apps and pages people use today, so they can make corrections.
+
+### 26. Removed excessive help text to be only one line of help text
+*10/25/2026*
+
+- **Decision:** The help text is cut to "Type a number at the start of a line to rank it, and then tap Sort when you are done to sort list by rank."
+- **Why:** The app should be intuitive to use, not give people a paragraph of instructions to read.
