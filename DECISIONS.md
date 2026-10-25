@@ -231,3 +231,10 @@ A running log of product and technical decisions for Actinerary: what was decide
 - **Decision:** × clears the red highlights the message is about, and the next Sort shows them again.
 - **Replaces:** Part of Decision 5.
 - **Why:** So subtasks and unnumbered items that don't have or need numbers don't remain highlighted permanently creating a distracting eyesore on the screen.
+
+### 30. Drag and drop with the number box
+*10/25/2026*
+
+- **Decision:** After a list's first Sort, you can drag an item by its number box (press and hold on a phone). Dropped among numbered items, it takes that spot's number and the numbers below follow on. An unnumbered item gets a number only when dropped above a numbered one, and a numbered item dropped below an unnumbered one loses its number. Main tasks move with their subtasks, subtasks move only within their parent, and completed items don't move. Dragging doesn't sort first.
+- **Options considered:** A separate grip on the left, a Reorder button, press and hold anywhere on the row, sorting before every drag, and blocking drags whenever numbers changed since the last Sort.
+- **Why:** The number box doubles as the grip so the row doesn't get too cluttered.
