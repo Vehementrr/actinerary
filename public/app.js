@@ -142,7 +142,7 @@ function apply(r) {
   if (!r) return;
   if (r.banner !== undefined) banner = r.banner;
   if (r.changed) touch();
-  if (r.focus) pendingFocus = r.focus;
+  if (r.focus) pendingFocus = { id: r.focus, caret: r.caret };
   renderEditor(!r.focus);
 }
 const blocking = flags => Object.values(flags).some(f => f.kind !== 'none');
@@ -212,6 +212,13 @@ function renderSidebar() {
 }
 
 /* ---------- rendering: editor ---------- */
+// Capitalizes the first letter typed into an empty item or title. Only the very first character, never after a number.
+function capFirst(el, before, e) {
+  if (before !== '' || e.inputType !== 'insertText' || !/^\p{Ll}/u.test(el.value)) return;
+  const p = el.selectionStart;
+  el.value = el.value[0].toLocaleUpperCase() + el.value.slice(1);
+  el.setSelectionRange(p, p);
+}
 function autosize(ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
 function button(text, cls) { const b = document.createElement('button'); b.type = 'button'; b.className = cls; b.textContent = text; return b; }
 
@@ -234,7 +241,10 @@ function rowEl(it, parent, flags) {
   ta.rows = 1; ta.value = it.text; ta.dataset.itemId = it.id;
   ta.setAttribute('aria-label', parent ? 'Subtask' : 'Task');
   ta.addEventListener('focus', () => { lastFocusId = it.id; });
-  ta.addEventListener('input', () => {
+  ta.spellcheck = true; ta.setAttribute('autocorrect', 'on');
+  ta.addEventListener('input', e => {
+    const f0 = L.find(cur(), it.id);
+    capFirst(ta, f0 ? f0.item.text : '', e);
     const r = L.setText(cur(), it.id, ta.value);
     if (!r.ok) {
       const f = L.find(cur(), it.id);
@@ -246,9 +256,10 @@ function rowEl(it, parent, flags) {
   });
   ta.addEventListener('keydown', e => {
     if (e.isComposing) return;
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); apply(L.newAfter(cur(), it.id)); }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); apply(L.splitItem(cur(), it.id, ta.selectionStart, ta.selectionEnd)); }
     else if (e.key === 'Tab') { e.preventDefault(); apply(e.shiftKey ? L.outdent(cur(), it.id) : L.indent(cur(), it.id)); }
     else if (e.key === 'Backspace' && ta.value === '') { e.preventDefault(); apply(L.deleteEmpty(cur(), it.id, F())); }
+    else if (e.key === 'Backspace' && ta.selectionStart === 0 && ta.selectionEnd === 0) { e.preventDefault(); apply(L.joinPrev(cur(), it.id, F())); }
   });
 
   const flag = document.createElement('span'); flag.className = 'flag';
@@ -265,7 +276,7 @@ function renderEditor(keepFocus) {
   $('emptyState').hidden = has || !loaded;
   $('paper').hidden = !has;
   ['sortBtn', 'indentBtn', 'outdentBtn', 'deleteListBtn'].forEach(id => { $(id).disabled = !has; });
-  if (!has) { $('list').innerHTML = ''; renderBanner(); return; }
+  if (!has) { $('list').innerHTML = ''; $('doneList').innerHTML = ''; renderBanner(); return; }
 
   // Remember where the cursor was so a re-render (e.g. a change from another device) doesn't lose it.
   let saved = null;
@@ -274,13 +285,15 @@ function renderEditor(keepFocus) {
 
   if (document.activeElement !== titleEl) titleEl.value = l.title || '';
   const flags = F();
+  // Open items go above + New item, completed items below it.
   const listEl = $('list'); listEl.innerHTML = '';
+  const doneEl = $('doneList'); doneEl.innerHTML = '';
   const doneCount = l.items.filter(x => x.done).length;
   let labelShown = false;
   for (const it of l.items) {
     if (it.done && !labelShown) {
       const lab = document.createElement('div'); lab.className = 'section-label';
-      lab.textContent = `Completed · ${doneCount}`; listEl.appendChild(lab); labelShown = true;
+      lab.textContent = `Completed · ${doneCount}`; doneEl.appendChild(lab); labelShown = true;
     }
     const g = document.createElement('div'); g.className = 'group';
     g.appendChild(rowEl(it, null, flags));
@@ -289,15 +302,15 @@ function renderEditor(keepFocus) {
       it.children.forEach(c => ch.appendChild(rowEl(c, it, flags)));
       g.appendChild(ch);
     }
-    listEl.appendChild(g);
+    (it.done ? doneEl : listEl).appendChild(g);
   }
-  listEl.querySelectorAll('textarea').forEach(autosize);
+  $('paper').querySelectorAll('.row textarea').forEach(autosize);
   renderBanner();
 
-  const focusTa = id => listEl.querySelector(`textarea[data-item-id="${id}"]`);
+  const focusTa = id => $('paper').querySelector(`textarea[data-item-id="${id}"]`);
   if (pendingFocus) {
-    const ta = focusTa(pendingFocus); pendingFocus = null;
-    if (ta) { ta.focus(); const p = ta.value.length; ta.setSelectionRange(p, p); }
+    const ta = focusTa(pendingFocus.id); const caret = pendingFocus.caret; pendingFocus = null;
+    if (ta) { ta.focus(); const p = caret ?? ta.value.length; ta.setSelectionRange(p, p); }
   } else if (saved) {
     const ta = focusTa(saved.id);
     if (ta) { ta.focus(); try { ta.setSelectionRange(saved.s, saved.e); } catch (e) {} }
@@ -351,8 +364,9 @@ $('sortBtn').addEventListener('click', () => {
   apply({ changed: r.changed, banner: r.banner });
 });
 $('addBtn').addEventListener('click', () => { const l = cur(); if (l) apply(L.addAtEnd(l)); });
-$('title').addEventListener('input', () => {
+$('title').addEventListener('input', e => {
   const l = cur(); if (!l) return;
+  capFirst($('title'), l.title || '', e);
   l.title = $('title').value; touch();
   const link = $('lists').querySelector('.list-link[aria-current="true"] .t');
   if (link) { link.textContent = l.title.trim() || 'Untitled'; link.classList.toggle('untitled', !l.title.trim()); }
@@ -361,7 +375,7 @@ $('title').addEventListener('keydown', e => {
   if (e.key !== 'Enter' || e.isComposing) return;
   e.preventDefault();
   const l = cur(); if (!l) return;
-  if (l.items[0]) { pendingFocus = l.items[0].id; renderEditor(); } else apply(L.addAtEnd(l));
+  if (l.items[0]) { pendingFocus = { id: l.items[0].id }; renderEditor(); } else apply(L.addAtEnd(l));
 });
 for (const [id, fn] of [['indentBtn', L.indent], ['outdentBtn', L.outdent]]) {
   const b = $(id);

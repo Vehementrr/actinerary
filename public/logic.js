@@ -7,7 +7,7 @@
 // A subtask is the same without children/autoPaused.
 //
 // Most functions take the list plus a `flags` object (item id -> { kind, value }) that drives the red
-// highlights, mutate both, and return { changed, banner, focus }. `banner` undefined means "leave it".
+// highlights, mutate both, and return { changed, banner, focus, caret }. `banner` undefined means "leave it".
 
 export const num = t => {
   const m = /^\s*(\d+)(?=\s|$)/.exec(t || '');
@@ -74,6 +74,7 @@ function insertOpenEnd(arr, it) {
   const i = arr.findIndex(x => x.done);
   i === -1 ? arr.push(it) : arr.splice(i, 0, it);
 }
+const keepNumMsg = info('Completed items keep their number.', ['Uncheck it first if you need to change the number.']);
 const lockedMsg = p => err(`Uncheck “${short(p.text)}” first to change its subtasks.`);
 
 /* ---------- checking ---------- */
@@ -166,19 +167,50 @@ export function sortList(list) {
 export function setText(list, id, text) {
   const f = find(list, id); if (!f) return { ok: false };
   if (f.item.done && num(text) !== num(f.item.text)) {
-    return { ok: false, banner: info('Completed items keep their number.', ['Uncheck it first if you need to change the number.']) };
+    return { ok: false, banner: keepNumMsg };
   }
   f.item.text = text;
   return { ok: true };
 }
-export function newAfter(list, id) {
+// Return: the text from `end` on moves into a new item below (the text between `start` and `end` is dropped).
+// At the very start of an item, a blank item goes above instead. A completed item's new item is completed too.
+export function splitItem(list, id, start, end = start) {
   const f = find(list, id); if (!f) return { changed: false };
   const { item: it, parent, arr } = f;
   if (parent && parent.done) return { changed: false, banner: err(`Uncheck “${short(parent.text)}” first to add subtasks.`) };
+  const head = it.text.slice(0, start), tail = it.text.slice(end);
+  if (it.done && num(head) !== num(it.text) && end > 0) return { changed: false, banner: keepNumMsg };
   const n = makeItem('', !!parent);
+  n.done = it.done;
   if (parent) parent.autoPaused = false;
-  it.done ? insertOpenEnd(arr, n) : arr.splice(arr.indexOf(it) + 1, 0, n);
-  return { changed: true, focus: n.id };
+  if (end === 0 && it.text) {
+    arr.splice(arr.indexOf(it), 0, n);
+    return { changed: true, focus: it.id, caret: 0 };
+  }
+  it.text = head; n.text = tail;
+  if (n.done) placeDone(arr, n);
+  else arr.splice(arr.indexOf(it) + 1, 0, n);
+  return { changed: true, focus: n.id, caret: 0 };
+}
+// Backspace at the start of an item: its text joins the end of the item above.
+// Only between two open or two completed items, never on a task with subtasks or a locked subtask.
+export function joinPrev(list, id, flags) {
+  const f = find(list, id); if (!f) return { changed: false };
+  const { item: it, parent, arr } = f;
+  if ((it.children || []).length) return { changed: false };
+  if (parent && parent.done) return { changed: false, banner: lockedMsg(parent) };
+  const order = visibleOrder(list); const i = order.indexOf(id);
+  if (i < 1) return { changed: false };
+  const p = find(list, order[i - 1]);
+  const above = p.item;
+  if (above.done !== it.done || (p.parent && p.parent.done)) return { changed: false };
+  if (!parent && it.done && !(p.parent || above).done) return { changed: false }; // not across + New item
+  const caret = above.text.length;
+  const text = above.text + it.text;
+  if (above.done && num(text) !== num(above.text)) return { changed: false, banner: keepNumMsg };
+  above.text = text;
+  remove(arr, it); delete flags[id];
+  return { changed: true, focus: above.id, caret };
 }
 export function addAtEnd(list) {
   const n = makeItem('');

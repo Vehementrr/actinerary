@@ -75,15 +75,13 @@
       </div>
 
       <div class="paper" id="paper">
-        <input id="title" placeholder="Title" autocomplete="off" aria-label="List title">
+        <input id="title" placeholder="Title" autocomplete="off" spellcheck="true" autocorrect="on" aria-label="List title">
         <div class="list" id="list"></div>
         <button class="btn quiet add" id="addBtn" type="button">+ New item</button>
+        <div class="list" id="doneList"></div>
       </div>
 
-      <div class="help hide-narrow">
-        <div>Type a number at the start of a line to rank it, like “3 Call the bank.” Tap Sort when you're done.</div>
-        <div><kbd>Enter</kbd> new item · <kbd>Tab</kbd> make subtask · <kbd>Shift</kbd>+<kbd>Tab</kbd> back to main task · <kbd>Backspace</kbd> on an empty line deletes it</div>
-      </div>
+      <div class="help hide-narrow">Type a number at the start of a line to rank it, and then tap Sort when you are done to sort list by rank.</div>
     </div>
   </main>
 </div>
