@@ -199,6 +199,32 @@ export function joinPrev(list, id, flags) {
   remove(arr, it); delete flags[id];
   return { changed: true, focus: above.id, caret };
 }
+// Drag and drop. `to` is the item's new place among the open items of its group, counted without it.
+// The list is already sorted, so numbered items come first. Dropped among them, the item takes that spot's
+// number and the numbers below follow on. An unnumbered item gets a number only when dropped above a numbered
+// one, and a numbered item dropped among the unnumbered ones loses its number.
+export function moveItem(list, id, to, flags) {
+  const f = find(list, id); if (!f) return { changed: false };
+  const { item: it, parent, arr } = f;
+  if (it.done || (parent && parent.done)) return { changed: false };
+  const open = arr.filter(x => !x.done && x !== it);
+  const block = open.filter(x => x.rank != null);
+  const rest = open.filter(x => x.rank == null);
+  to = Math.max(0, Math.min(to, open.length));
+  const before = arr.map(x => x.id + x.rank).join();
+  const numbered = it.rank != null ? to <= block.length : to < block.length;
+  const base = Math.min(...[...block, ...(it.rank != null ? [it] : [])].map(x => x.rank), Infinity);
+  if (numbered) { block.splice(to, 0, it); delete flags[it.id]; }
+  else { it.rank = null; rest.splice(Math.max(0, to - block.length), 0, it); }
+  const used = new Set(arr.filter(x => x.done && x.rank != null).map(x => x.rank));
+  let next = base === Infinity ? 1 : base;
+  for (const x of block) {
+    while (used.has(next)) next++;
+    x.rank = next++;
+  }
+  arr.splice(0, arr.length, ...block, ...rest, ...arr.filter(x => x.done));
+  return { changed: before !== arr.map(x => x.id + x.rank).join() };
+}
 export function addAtEnd(list) {
   const n = makeItem('');
   insertOpenEnd(list.items, n);

@@ -157,6 +157,11 @@ button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px
 .rank:placeholder-shown:not(:focus) { opacity: .5; }
 .row.done .rank { color: var(--muted); border-color: transparent; }
 .row.flagged .rank { border-color: var(--err); }
+.rank { touch-action: none; -webkit-touch-callout: none; }
+.dragging { opacity: .45; }
+.drop-above { box-shadow: inset 0 2px 0 var(--accent); }
+.drop-below { box-shadow: inset 0 -2px 0 var(--accent); }
+body.drag-on, body.drag-on * { cursor: grabbing; user-select: none; -webkit-user-select: none; }
 .flag { font-size: 12px; font-weight: 700; color: var(--err); text-transform: uppercase; letter-spacing: .06em; padding-top: 6px; white-space: nowrap; }
 .section-label { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 16px 6px 6px; border-top: 1px solid var(--line); margin-top: 6px; }
 .add { margin-top: 6px; color: var(--accent); }

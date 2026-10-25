@@ -92,7 +92,7 @@ function onLists(incoming, removed, fromCache) {
       lists.set(l.id, l);
       if (l.id === currentId) currentChanged = true;
     } else {
-      local.updatedAt = l.updatedAt;
+      local.updatedAt = l.updatedAt; local.sortedAt = l.sortedAt;
     }
   }
   for (const id of removed) {
@@ -212,6 +212,54 @@ function renderSidebar() {
   }
 }
 
+/* ---------- drag and drop ---------- */
+// The number box doubles as the drag handle: drag it with a mouse, or press and hold it on a touch screen.
+// Dragging turns on for a list after its first Sort.
+function wireDrag(rk, it, parent, row) {
+  if (it.done) return;
+  rk.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
+    const p = { x: e.clientX, y: e.clientY, on: false, timer: null };
+    let el = null, targets = [], to = 0;
+    try { rk.setPointerCapture(e.pointerId); } catch (err) {}
+    const mark = () => targets.forEach(t => t.classList.remove('drop-above', 'drop-below'));
+    const over = y => {
+      to = targets.filter(t => { const r = t.getBoundingClientRect(); return r.top + r.height / 2 < y; }).length;
+      mark();
+      if (to < targets.length) targets[to].classList.add('drop-above');
+      else if (targets.length) targets[targets.length - 1].classList.add('drop-below');
+      if (y < 60) scrollBy(0, -12); else if (y > innerHeight - 60) scrollBy(0, 12);
+    };
+    const begin = () => {
+      const l = cur(); if (!l) return stop();
+      if (!l.sortedAt) { banner = { type: 'info', title: 'Tap Sort once to turn on dragging for this list.', msgs: [] }; renderBanner(); return stop(); }
+      p.on = true; rk.blur();
+      el = parent ? row : row.parentElement;
+      targets = [...el.parentElement.children].filter(t => t !== el && !t.classList.contains('done'));
+      el.classList.add('dragging'); document.body.classList.add('drag-on');
+      if (navigator.vibrate) navigator.vibrate(10);
+      over(p.y);
+    };
+    const moveH = e => {
+      if (p.on) { e.preventDefault(); return over(e.clientY); }
+      if (Math.hypot(e.clientX - p.x, e.clientY - p.y) < 6) return;
+      if (e.pointerType === 'mouse') { p.y = e.clientY; begin(); } else stop();
+    };
+    const upH = () => {
+      const done = p.on; stop();
+      if (done) apply(L.moveItem(cur(), it.id, to, F()));
+    };
+    function stop() {
+      clearTimeout(p.timer); mark();
+      if (el) el.classList.remove('dragging');
+      document.body.classList.remove('drag-on');
+      rk.removeEventListener('pointermove', moveH); rk.removeEventListener('pointerup', upH); rk.removeEventListener('pointercancel', stop);
+    }
+    rk.addEventListener('pointermove', moveH); rk.addEventListener('pointerup', upH); rk.addEventListener('pointercancel', stop);
+    if (e.pointerType !== 'mouse') p.timer = setTimeout(begin, 350);
+  });
+}
+
 /* ---------- rendering: editor ---------- */
 // Capitalizes the first letter typed into an empty item or title. Only the very first character, never after a number.
 function capFirst(el, before, e) {
@@ -278,6 +326,8 @@ function rowEl(it, parent, flags) {
   const flag = document.createElement('span'); flag.className = 'flag';
   if (fl) flag.textContent = { none: 'No number', open: 'Open' }[fl.kind];
   rk.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); ta.focus(); } });
+  row.dataset.id = it.id;
+  wireDrag(rk, it, parent, row);
 
   row.append(rk, cb, ta, flag);
   return row;
@@ -385,6 +435,7 @@ $('sortBtn').addEventListener('click', () => {
   const l = cur(); if (!l) return;
   const r = L.sortList(l);
   flagsBy[l.id] = r.flags;
+  if (!l.sortedAt) { l.sortedAt = Date.now(); r.changed = true; } // turns on dragging
   apply({ changed: r.changed, banner: r.banner });
 });
 $('addBtn').addEventListener('click', () => { const l = cur(); if (l) apply(L.addAtEnd(l)); });

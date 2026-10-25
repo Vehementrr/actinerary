@@ -9,7 +9,7 @@ service cloud.firestore {
       allow read, delete: if request.auth != null && request.auth.uid == userId;
       allow create, update: if request.auth != null
         && request.auth.uid == userId
-        && request.resource.data.keys().hasOnly(['title', 'items', 'createdAt', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['title', 'items', 'createdAt', 'updatedAt', 'sortedAt'])
         && request.resource.data.title is string
         && request.resource.data.items is list;
     }
