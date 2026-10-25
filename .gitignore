@@ -15,3 +15,6 @@
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
+
+# Fake test data saved by the Firebase emulators
+emulator-data/

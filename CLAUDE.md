@@ -56,7 +56,7 @@ Plain HTML, CSS, and JavaScript modules. No build step. The Firebase SDK loads f
 
 Colin approves each of these steps. Never deploy, push, or tag without his go-ahead.
 
-1. Test locally first. Use fake data where possible; see "Local testing" below.
+1. Test locally first, with fake data; see "Local testing" below.
 2. In `public/sw.js`, bump the number at the end of `VERSION`.
 3. Deploy: `firebase deploy --only hosting` (add `,firestore:rules` if the rules changed).
 4. Colin checks the live app on his Mac and iPhone.
@@ -67,8 +67,10 @@ Colin approves each of these steps. Never deploy, push, or tag without his go-ah
 
 ## Local testing
 
-- `firebase emulators:start --only hosting` serves the app at http://localhost:5050. It uses the **real** database.
-- Planned: full Firebase emulators (fake database and sign-in) for testing new features. This needs Java installed.
+- `firebase emulators:start --import=emulator-data --export-on-exit` starts a fake database, fake sign-in, and the app at http://localhost:5050. Open it in a private window. The fake data can be viewed at http://localhost:4000.
+- On localhost, `store.js` connects to the fake database and sign-in automatically and skips the offline copy. The live app isn't affected.
+- Sample lists and the test account are in `emulator-data/`, which isn't in git. They're saved when the emulators stop with a single Control+C.
+- Java (Temurin 25) is installed on Colin's Mac for this.
 
 ## Environment notes
 
@@ -77,4 +79,4 @@ Colin approves each of these steps. Never deploy, push, or tag without his go-ah
 
 ## Current status (10/25/2026)
 
-- **Live:** v1.3 at actinerary.app.
+- **Live:** v1.4 at actinerary.app.

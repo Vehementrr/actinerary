@@ -158,7 +158,7 @@ Open App on desktop and refresh with CMD+R. Test to see app is still working as 
 ## Making changes
 
 1. Edit files in `public/`.
-2. Try it locally with `firebase emulators:start --only hosting` and open `http://localhost:5050`. (This uses your real database, not a test one.)
+2. Try it locally with fake data: run `firebase emulators:start --import=emulator-data --export-on-exit`, open `http://localhost:5050` in a private browser window, and sign in with the test account. Your real lists are never touched. Press Control+C once to stop, which saves your sample lists in `emulator-data`. (Needs [Java](https://adoptium.net) 21 or newer. The very first time, use `--export-on-exit=emulator-data` without `--import`, since there are no sample lists yet.)
 3. In `public/sw.js`, bump the number at the end of `VERSION` (for example `actinerary-v2` → `actinerary-v3`) so devices fetch the new files.
 4. Deploy with `firebase deploy --only hosting` (add `,firestore:rules` if the rules changed), check the live app, then commit, push, and tag.
 

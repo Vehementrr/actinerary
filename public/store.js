@@ -3,21 +3,30 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
 import {
   getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signInWithRedirect,
-  getRedirectResult, signOut,
+  getRedirectResult, signOut, connectAuthEmulator,
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import {
-  initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
-  collection, doc, setDoc, deleteDoc, onSnapshot,
+  initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache,
+  connectFirestoreEmulator, collection, doc, setDoc, deleteDoc, onSnapshot,
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 import { firebaseConfig } from './firebase-config.js';
+
+// Opened at localhost, the app uses Firebase's emulators: a fake database and fake sign-in on this computer.
+// Started with `firebase emulators:start`. The live app never takes this path.
+const onLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 // Keeps a copy of your lists on the device, so the app works offline and syncs when you reconnect.
+// Not when testing, so fake lists never mix with a saved copy of real ones.
 const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+  localCache: onLocalhost ? memoryLocalCache() : persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
   ignoreUndefinedProperties: true,
 });
+if (onLocalhost) {
+  connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+  connectFirestoreEmulator(db, '127.0.0.1', 8080);
+}
 
 const provider = new GoogleAuthProvider();
 provider.setCustomParameters({ prompt: 'select_account' });

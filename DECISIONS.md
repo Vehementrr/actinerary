@@ -121,7 +121,7 @@ A running log of product and technical decisions for Actinerary: what was decide
   - Use Firebase Hosting's release history to roll the live app back in seconds.
   - Keep database rules compatible with both the old and new app, so rolling back the app doesn't require rolling back the rules.
   - Make new features add data rather than rewrite it.
-  - Test new features locally against Firebase's emulators, with a fake database and fake sign-in. (Not set up yet; needs Java.)
+  - Test new features locally against Firebase's emulators, with a fake database and fake sign-in. (Set up 10/25/2026.)
 - **Options considered:** Testing locally against the real database.
 - **Why:** Rollback procedures should be in place before changing production, and testing with fake data keeps real lists safe.
 
