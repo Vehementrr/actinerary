@@ -48,6 +48,8 @@ firestore.rules      Who may read and write data (only you, your own lists)
 firebase.json        Hosting and rules settings for the Firebase CLI
 .firebaserc          Which Firebase project this folder deploys to
 DECISIONS.md         Log of product and technical decisions
+CLAUDE.md            Guidance for Claude working in this repo
+CASE-STUDY-NOTES.md  Story moments for the case study
 ```
 
 ## Security
@@ -55,7 +57,7 @@ DECISIONS.md         Log of product and technical decisions
 - **No secrets in this repo.** `firebase-config.js` holds your project's public settings. They identify the project; they don't grant access. Every visitor's browser sees them anyway.
 - **Your password never touches Actinerary.** You sign in on Google's own page. The app gets a short-lived token that's stored on your device and renewed automatically.
 - **The database rules do the protecting.** `firestore.rules` lets a signed-in user read and write only `users/{their id}/lists`. Google's servers enforce this; editing the app can't get around it.
-- **The API key is locked to the app's own web addresses** (setup step 9). GitHub's secret scanning may flag the key in `firebase-config.js`. It's a Firebase web key, public by design, so the alert can be closed as a false positive.
+- **The API key is locked to the app's own web addresses** (setup step 10). GitHub's secret scanning may flag the key in `firebase-config.js`. It's a Firebase web key, public by design, so the alert can be closed as a false positive.
 - **Never add a service account key** (a JSON file containing `"private_key"`). Actinerary doesn't need one. `.gitignore` blocks the usual filenames as a backstop.
 
 ## Setup (one time)
@@ -71,7 +73,7 @@ You need a Google account and [Node.js](https://nodejs.org) (the LTS version) in
 ### 2. Register the web app and copy its settings
 
 1. In the project overview, click the web icon **`</>`** to add a web app. Nickname: `Actinerary`. Leave the Hosting checkbox off.
-2. Firebase shows a `firebaseConfig = { ... }` block. Copy its six values into `public/firebase-config.js`, replacing the values that are there.
+2. Firebase shows a `firebaseConfig = { ... }` block. Copy its values into `public/firebase-config.js`, replacing the values that are there, but keep the `authDomain` switch and put your own domain and project address in it.
 
 ### 3. Turn on Google sign-in
 
@@ -103,7 +105,15 @@ firebase deploy --only hosting,firestore:rules
 
 When it finishes, open your custom domain (for Actinerary, **`https://actinerary.app`**) and sign in. Before a custom domain is connected, use **`https://YOUR-PROJECT-ID.firebaseapp.com`** instead.
 
-### 7. Install it as an app
+### 7. Connect your custom domain - this applies only if using Firebase
+
+1. In the Firebase console, go to **Hosting → Add custom domain** and enter your domain (for Actinerary, `actinerary.app`). Firebase shows DNS records to add.
+2. Add those records where your domain is registered (for Actinerary, Cloudflare). In Cloudflare, set each one to **DNS only** (gray cloud), not proxied.
+3. Wait for Firebase to show the domain as connected.
+4. In **Security → Authentication → Settings → Authorized domains**, check that your domain is listed. Add it if it isn't.
+5. In [Google Cloud Console](https://console.cloud.google.com) → your project → **APIs & Services → Credentials**, open **Web client (auto created by Google Service)**. Under **Authorized redirect URIs**, add `https://YOUR-DOMAIN/__/auth/handler` (for Actinerary, `https://actinerary.app/__/auth/handler`). Save.
+
+### 8. Install it as an app
 
 - **iPhone:** open the address in Safari → click … → Share → **Add to Home Screen** → Add → Sign in with your Google account
 - **Android:** open the address in Chrome → tap ⋮ → **Add to Home screen** (or **Install app**) → Install → Sign in with your Google account
@@ -112,7 +122,7 @@ When it finishes, open your custom domain (for Actinerary, **`https://actinerary
   - Chrome: open the address in Chrome → Click on small install icon (computer screen with down arrow) on right side of address bar → Sign in with your Google account
 - **Windows PC:** open the address in Chrome → click the install icon on the right side of the address bar → Sign in with your Google account. In Edge: ⋯ → **Apps** → **Install this site as an app**.
 
-### 8. Check the rules (recommended)
+### 9. Check the rules (recommended)
 
 In **Databases & Storage → Firestore → Rules → Rules Playground**:
 
@@ -130,7 +140,7 @@ In **Databases & Storage → Firestore → Rules → Rules Playground**:
   - Click Run
   - Expected result: Simulated read allowed
 
-### 9. Lock the API key to your site (recommended)
+### 10. Lock the API key to your site (recommended)
 
 In [Google Cloud Console](https://console.cloud.google.com) → your project → **APIs & Services → Credentials**, open the **Browser key (auto created by Firebase)**. Under **Application restrictions**, choose **Websites** and add:
 

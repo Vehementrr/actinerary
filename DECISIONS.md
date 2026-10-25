@@ -54,7 +54,7 @@ A running log of product and technical decisions for Actinerary: what was decide
 *10/21/2026*
 
 - **Decision:**
-  - One level of subtasks only. Tab / Shift+Tab on a computer, arrow buttons on a phone.
+  - One level of subtasks only. Indent and outdent work by using Tab / Shift+Tab or the app arrow buttons on a computer, and by using the app arrow buttons on a mobile device.
   - Subtasks follow the same rules as main tasks, scoped to their parent, and sort independently without touching the main tasks' numbers.
   - A main task can't be checked while it has open subtasks. Trying shows an error and highlights the open subtasks red.
   - Checking the last open subtask automatically checks the main task.
