@@ -75,6 +75,6 @@ Colin approves each of these steps. Never deploy, push, or tag without his go-ah
 - Colin's Mac needed `sudo` for `npm install -g`.
 - The domain is registered at Cloudflare. Its DNS records for Firebase must stay **DNS only** (gray cloud), not proxied.
 
-## Current status (10/24/2026)
+## Current status (10/25/2026)
 
-- **Live:** v1.2 at actinerary.app.
+- **Live:** v1.3 at actinerary.app.
