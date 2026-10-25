@@ -167,9 +167,10 @@ A running log of product and technical decisions for Actinerary: what was decide
 
 ### 21. Completed Lists
 *10/22/2026*
+*Built in v1.8 on 10/25/2026.*
 
 - **Decision:**
-  - Any list can be finished with **Mark List Complete**. The button is grayed out until every item is checked.
+  - Any list can be finished with **Complete List**. The button is grayed out until every item is checked.
   - Completed lists move to a Completed Lists section, collapsed by default and newest first.
   - Completed lists are view-only until you tap **Reopen list**.
 - **Options considered:** Completing a list automatically when the last item is checked.
