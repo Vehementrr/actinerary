@@ -59,6 +59,21 @@ export function allChecked(list) {
   return open === 0 && done > 0;
 }
 
+// Carry over: the open items move to a new list. Numbered ones are renumbered from 1 in order, and unnumbered
+// ones stay unnumbered at the bottom. Main tasks bring all their subtasks. The old list keeps its completed
+// items and is marked complete. Returns the new list.
+export function carryOver(list, title) {
+  const open = list.items.filter(x => !x.done && (x.text.trim() || (x.children || []).length));
+  const numbered = open.filter(x => x.rank != null).sort((a, b) => a.rank - b.rank);
+  numbered.forEach((x, i) => { x.rank = i + 1; delete x.grand; });
+  list.items = list.items.filter(x => x.done);
+  list.completedAt = Date.now();
+  const nl = makeList(title);
+  nl.items = [...numbered, ...open.filter(x => x.rank == null)];
+  nl.sortedAt = Date.now();
+  return nl;
+}
+
 const rankKey = x => x.rank ?? Infinity;
 const remove = (arr, it) => { const i = arr.indexOf(it); if (i > -1) arr.splice(i, 1); };
 const err = (title, msgs = []) => ({ type: 'error', title, msgs });

@@ -120,6 +120,7 @@ button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px
 .banner button { background: none; border: 0; color: inherit; font-size: 20px; line-height: 1; padding: 0 4px; }
 .confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 10px 12px; border-radius: 10px; background: var(--paper); border: 1px solid var(--line); margin-bottom: 10px; font-size: 15px; }
 .confirm span { flex: 1; min-width: 180px; }
+.confirm input { flex: 1 1 160px; min-width: 0; font: inherit; color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
 
 .paper { background: var(--paper); border-radius: 14px; border: 1px solid var(--line); padding: 20px 18px 14px; }
 #title {

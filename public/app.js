@@ -156,6 +156,33 @@ function openList(id) {
   setView('list');
   renderSidebar(); renderEditor();
 }
+function askCarryOver() {
+  const l = cur(); if (!l) return;
+  const n = L.counts(l).open;
+  const area = $('confirmArea'); area.innerHTML = '';
+  const c = document.createElement('div'); c.className = 'confirm';
+  const s = document.createElement('span');
+  s.textContent = `Move ${n} open item${n === 1 ? '' : 's'} to a new list?`;
+  const t = document.createElement('input');
+  t.placeholder = 'New list title'; t.autocomplete = 'off'; t.spellcheck = true; t.setAttribute('autocorrect', 'on');
+  const yes = button('Move', 'btn primary'); yes.disabled = true;
+  const no = button('Cancel', 'btn');
+  t.addEventListener('input', e => { capFirst(t, '', e); yes.disabled = !t.value.trim(); });
+  t.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing && t.value.trim()) yes.click(); });
+  yes.addEventListener('click', () => {
+    const nl = L.carryOver(l, t.value.trim());
+    delete flagsBy[l.id];
+    touch(l.id); flush(l.id);
+    lists.set(nl.id, nl);
+    store.saveList(user.uid, nl).catch(saveError);
+    area.innerHTML = ''; banner = null;
+    currentId = nl.id; store_set(LAST, nl.id);
+    renderSidebar(); renderEditor();
+  });
+  no.addEventListener('click', () => { area.innerHTML = ''; });
+  c.append(s, t, yes, no); area.appendChild(c);
+  t.focus();
+}
 function newList() {
   if (currentId) flush(currentId);
   const l = L.makeList('');
@@ -354,6 +381,7 @@ function syncCompleteBtn() {
   const l = cur(), b = $('completeBtn'), ro = viewOnly();
   b.textContent = ro ? 'Reopen list' : 'Complete List';
   b.disabled = !l || (!ro && !L.allChecked(l));
+  $('carryBtn').disabled = !l || ro || !L.counts(l).open;
 }
 function renderEditor(keepFocus) {
   const l = cur();
@@ -454,6 +482,7 @@ $('signOutBtn').addEventListener('click', () => { flushAll(); store.signOutUser(
 $('newListBtn').addEventListener('click', newList);
 $('emptyNewBtn').addEventListener('click', newList);
 $('deleteListBtn').addEventListener('click', askDeleteList);
+$('carryBtn').addEventListener('click', askCarryOver);
 $('backBtn').addEventListener('click', () => { if (currentId) flush(currentId); banner = null; setView('index'); renderSidebar(); });
 $('sortBtn').addEventListener('click', () => {
   const l = cur(); if (!l) return;

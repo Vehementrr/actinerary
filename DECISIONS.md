@@ -239,3 +239,12 @@ A running log of product and technical decisions for Actinerary: what was decide
 - **Decision:** After a list's first Sort, you can drag an item by its number box (press and hold on a phone). Dropped among numbered items, it takes that spot's number and the numbers below follow on. An unnumbered item gets a number only when dropped above a numbered one, and a numbered item dropped below an unnumbered one loses its number. Main tasks move with their subtasks, subtasks move only within their parent, and completed items don't move. Dragging doesn't sort first.
 - **Options considered:** A separate grip on the left, a Reorder button, press and hold anywhere on the row, sorting before every drag, and blocking drags whenever numbers changed since the last Sort.
 - **Why:** The number box doubles as the grip so the row doesn't get too cluttered.
+
+## Lists
+
+### 31. Carry Over
+*10/25/2026*
+
+- **Decision:** Carry Over moves a list's open items to a new list, after a confirm where you type the new title. Numbered items renumber from 1, unnumbered items stay at the bottom, and main tasks bring all their subtasks. The old list keeps its completed items and moves to Completed Lists. Blank lines aren't carried.
+- **Options considered:** Keeping the old title, with a trailing date swapped for today's.
+- **Why:** I often create lists with more things than I can get done in a day, and want to create a new list for a new day. Or sometimes I want to split projects up at certain points, so I want to be able to carry over the open items onto a new list, and leave the completed ones behind.

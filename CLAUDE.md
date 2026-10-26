@@ -79,4 +79,4 @@ Colin approves each of these steps. Never deploy, push, or tag without his go-ah
 
 ## Current status (10/25/2026)
 
-- **Live:** v1.8 at actinerary.app.
+- **Live:** v1.9 at actinerary.app.
