@@ -248,3 +248,9 @@ A running log of product and technical decisions for Actinerary: what was decide
 - **Decision:** Carry Over moves a list's open items to a new list, after a confirm where you type the new title. Numbered items renumber from 1, unnumbered items stay at the bottom, and main tasks bring all their subtasks. The old list keeps its completed items and moves to Completed Lists. Blank lines aren't carried.
 - **Options considered:** Keeping the old title, with a trailing date swapped for today's.
 - **Why:** I often create lists with more things than I can get done in a day, and want to create a new list for a new day. Or sometimes I want to split projects up at certain points, so I want to be able to carry over the open items onto a new list, and leave the completed ones behind.
+
+### 32. Unique list titles
+*10/25/2026*
+
+- **Decision:** No two lists can share a title, ignoring capitals and extra spaces, and completed lists count too. Typing a used title turns it red with "Title already used.", and leaving the box puts the previous title back. In Carry Over, a used title shows the same message and keeps Move grayed out. Blank titles don't count, and existing duplicates stay until edited.
+- **Why:** Duplicate titles could get confusing.
