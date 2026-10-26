@@ -89,6 +89,15 @@ export function copyItems(items) {
 export const dropDate = t => (t || '').replace(/\s*\d{1,2}\/\d{1,2}\/\d{4}\s*$/, '').trim();
 export const mmddyyyy = d => `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
 
+// Search: the phrase as typed, ignoring capitals. Returns up to `max` matching items and subtasks, or null if nothing matches.
+export function searchList(list, q, max = 3) {
+  const k = (q || '').trim().toLowerCase(); if (!k) return null;
+  const has = t => (t || '').toLowerCase().includes(k);
+  const lines = [];
+  for (const it of list.items) for (const x of [it, ...(it.children || [])]) if (has(x.text) && lines.length < max) lines.push(x);
+  return has(list.title) || lines.length ? { lines } : null;
+}
+
 const rankKey = x => x.rank ?? Infinity;
 const remove = (arr, it) => { const i = arr.indexOf(it); if (i > -1) arr.splice(i, 1); };
 const err = (title, msgs = []) => ({ type: 'error', title, msgs });

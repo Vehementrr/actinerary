@@ -331,6 +331,7 @@ function showTaken(on) {
   else if (banner && banner.title === TAKEN) banner = null;
   renderBanner();
 }
+let query = ''; // the search box; while it has text the sidebar shows only matching lists
 function renderSidebar() {
   const nav = $('lists'); nav.innerHTML = '';
   if (!loaded) {
@@ -338,50 +339,78 @@ function renderSidebar() {
     p.textContent = 'Loading your lists…';
     nav.appendChild(p); return;
   }
+  const hits = new Map();
+  if (query.trim()) for (const l of lists.values()) { const h = L.searchList(l, query); if (h) hits.set(l.id, h); }
+  const searching = !!query.trim();
+  const shown = ls => searching ? ls.filter(l => hits.has(l.id)) : ls;
   const all = sortedLists();
-  const openLists = all.filter(l => !l.completedAt), doneLists = all.filter(l => l.completedAt);
-  const tpls = sortedTemplates();
-  if (!all.length) {
-    const p = document.createElement('div'); p.className = 'none';
-    p.textContent = 'No lists yet.'; nav.appendChild(p);
-  }
-  openLists.forEach(l => nav.appendChild(listLink(l)));
+  const openLists = shown(all.filter(l => !l.completedAt)), doneLists = shown(all.filter(l => l.completedAt));
+  const tpls = shown(sortedTemplates());
+  const none = text => { const p = document.createElement('div'); p.className = 'none'; p.textContent = text; nav.appendChild(p); };
+  if (searching && !hits.size) return none('No matches.');
+  if (!searching && !all.length) none('No lists yet.');
+  openLists.forEach(l => nav.append(...listLink(l, hits.get(l.id))));
 
-  // Templates: collapsible, with + to make one from scratch.
-  const tOpen = store_get(TPL_OPEN) === '1';
-  const th = document.createElement('div'); th.className = 'tpl-head';
-  const tt = button(`${tOpen ? '▾' : '▸'} Templates · ${tpls.length}`, 'done-lists-toggle');
-  tt.setAttribute('aria-expanded', String(tOpen));
-  tt.addEventListener('click', () => { store_set(TPL_OPEN, tOpen ? '0' : '1'); renderSidebar(); });
-  const add = button('+', 'tpl-add'); add.setAttribute('aria-label', 'New template');
-  add.addEventListener('click', newTemplate);
-  th.append(tt, add);
-  const tBox = document.createElement('div'); tBox.hidden = !tOpen;
-  tpls.forEach(l => tBox.appendChild(listLink(l)));
-  nav.append(th, tBox);
+  // Templates: collapsible, with + to make one from scratch. Search opens every section with matches.
+  if (!searching || tpls.length) {
+    const tOpen = searching || store_get(TPL_OPEN) === '1';
+    const th = document.createElement('div'); th.className = 'tpl-head';
+    const tt = button(`${tOpen ? '▾' : '▸'} Templates · ${tpls.length}`, 'done-lists-toggle');
+    tt.setAttribute('aria-expanded', String(tOpen));
+    tt.addEventListener('click', () => { store_set(TPL_OPEN, tOpen ? '0' : '1'); renderSidebar(); });
+    const add = button('+', 'tpl-add'); add.setAttribute('aria-label', 'New template');
+    add.addEventListener('click', newTemplate);
+    th.append(tt, add);
+    const tBox = document.createElement('div'); tBox.hidden = !tOpen;
+    tpls.forEach(l => tBox.append(...listLink(l, hits.get(l.id))));
+    nav.append(th, tBox);
+  }
 
   if (doneLists.length) {
-    const open = store_get(DONE_OPEN) === '1';
+    const open = searching || store_get(DONE_OPEN) === '1';
     const h = button(`${open ? '▾' : '▸'} Completed Lists · ${doneLists.length}`, 'done-lists-toggle');
     h.setAttribute('aria-expanded', String(open));
     h.addEventListener('click', () => { store_set(DONE_OPEN, open ? '0' : '1'); renderSidebar(); });
     const doneBox = document.createElement('div'); doneBox.hidden = !open;
-    doneLists.forEach(l => doneBox.appendChild(listLink(l)));
+    doneLists.forEach(l => doneBox.append(...listLink(l, hits.get(l.id))));
     nav.append(h, doneBox);
   }
 }
-function listLink(l) {
+// Text with the search phrase highlighted.
+function marked(el, text) {
+  const k = query.trim().toLowerCase(), lower = text.toLowerCase();
+  let at = 0, i;
+  while (k && (i = lower.indexOf(k, at)) > -1) {
+    el.append(text.slice(at, i));
+    const m = document.createElement('mark'); m.textContent = text.slice(i, i + k.length); el.append(m);
+    at = i + k.length;
+  }
+  el.append(text.slice(at));
+}
+// A list's link, plus its matching lines while searching.
+function listLink(l, hit) {
   const b = document.createElement('button');
   b.type = 'button'; b.className = 'list-link';
   b.setAttribute('aria-current', String(l.id === currentId));
   const t = document.createElement('span'); t.className = 't' + (l.title.trim() ? '' : ' untitled');
-  t.textContent = l.title.trim() || 'Untitled';
+  marked(t, l.title.trim() || 'Untitled');
   const { open, done } = L.counts(l);
   const m = document.createElement('span'); m.className = 'm';
   m.textContent = l.isTemplate ? `${open} item${open === 1 ? '' : 's'}` : `${open} open · ${done} done`;
   b.append(t, m);
   b.addEventListener('click', () => openList(l.id));
-  return b;
+  const lines = (hit ? hit.lines : []).map(x => {
+    const h = button('', 'hit'); marked(h, x.text);
+    h.addEventListener('click', () => { openList(l.id); flashItem(x.id); });
+    return h;
+  });
+  return [b, ...lines];
+}
+// Scrolls to an item from a search result and briefly highlights it.
+function flashItem(id) {
+  const row = $('paper').querySelector(`.row[data-id="${id}"]`); if (!row) return;
+  row.scrollIntoView({ block: 'center' });
+  row.classList.remove('flash'); void row.offsetWidth; row.classList.add('flash');
 }
 
 /* ---------- drag and drop ---------- */
@@ -614,6 +643,10 @@ $('signInBtn').addEventListener('click', () => {
 });
 $('signOutBtn').addEventListener('click', () => { flushAll(); store.signOutUser(); });
 $('newListBtn').addEventListener('click', newList);
+const setQuery = v => { query = v; if ($('search').value !== v) $('search').value = v; $('searchClear').hidden = !v; renderSidebar(); };
+$('search').addEventListener('input', () => setQuery($('search').value));
+$('search').addEventListener('keydown', e => { if (e.key === 'Escape') setQuery(''); });
+$('searchClear').addEventListener('click', () => { setQuery(''); $('search').focus(); });
 $('emptyNewBtn').addEventListener('click', newList);
 $('deleteListBtn').addEventListener('click', askDeleteList);
 $('carryBtn').addEventListener('click', askCarryOver);

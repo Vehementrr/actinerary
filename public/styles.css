@@ -91,6 +91,14 @@ button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px
 .list-link .t.untitled { color: var(--muted); font-weight: 400; font-style: italic; }
 .list-link .m { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .lists .none { color: var(--muted); font-size: 14px; padding: 8px 10px; }
+.search { position: relative; }
+.search input { width: 100%; box-sizing: border-box; font: inherit; font-size: 15px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 8px 32px 8px 10px; }
+.search button { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: 0; color: var(--muted); font-size: 20px; line-height: 1; padding: 2px 6px; }
+.hit { display: block; width: 100%; text-align: left; background: transparent; border: 0; border-radius: 6px; font: inherit; font-size: 14px; color: var(--muted); padding: 3px 10px 3px 22px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hit:hover { background: var(--paper); color: var(--ink); }
+.lists mark { background: var(--accent-soft); color: var(--ink); border-radius: 3px; }
+.row.flash { animation: flash 1.6s ease-out; }
+@keyframes flash { from { background: var(--accent-soft); } to { background: transparent; } }
 .done-lists-toggle { text-align: left; background: transparent; border: 0; color: var(--muted); font: inherit; font-size: 13px; font-weight: 700; padding: 14px 10px 6px; }
 .account { display: grid; gap: 6px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; }
 .account .who { display: flex; align-items: center; gap: 6px; }

@@ -261,3 +261,11 @@ A running log of product and technical decisions for Actinerary: what was decide
 
 - **Decision:** A second Sort button sits at the bottom left, under the help text. Delete list moved from the toolbar to the bottom right, and its confirm shows there.
 - **Why:** So the toolbar doesn't get too cluttered. So user doesn't have to scroll back up to the top of a long list in order to use the sort button.
+
+## Search
+
+### 34. Search
+*10/26/2026*
+
+- **Decision:** A search box at the top of the sidebar finds a phrase in list titles, items and subtasks across open lists, templates and completed lists, ignoring capitals. Matching lists show with up to 3 highlighted lines, and tapping a line opens the list at that item. Numbers aren't searched. × or Esc clears it.
+- **Why:** As volume of lists, templates, and projects grows, I want to be able to easily find my way to a list or item in the history instead of looking through each item manually.
