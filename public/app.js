@@ -29,6 +29,7 @@ let user = null;
 let stopLists = null;
 let loaded = false;
 const lists = new Map();      // id -> list
+const projects = new Map();   // id -> { id, title, createdAt }
 const flagsBy = {};           // list id -> { item id -> flag }
 const timers = new Map();     // list id -> pending save timer
 let currentId = null;
@@ -38,7 +39,7 @@ let lastFocusId = null;
 
 const cur = () => lists.get(currentId) || null;
 const F = () => (flagsBy[currentId] ||= {});
-const sig = l => JSON.stringify([l.title || '', l.items, l.completedAt || null]);
+const sig = l => JSON.stringify([l.title || '', l.items, l.completedAt || null, l.projectId || null]);
 const viewOnly = () => !!(cur() && cur().completedAt); // completed lists can't be edited until reopened
 const isTpl = () => !!(cur() && cur().isTemplate);
 const store_get = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
@@ -61,7 +62,7 @@ async function init() {
 
 function onUser(u) {
   if (stopLists) { stopLists(); stopLists = null; }
-  user = u; loaded = false; lists.clear();
+  user = u; loaded = false; lists.clear(); projects.clear();
   if (!u) { show('signin'); return; }
   $('userEmail').textContent = u.email || '';
   show('app');
@@ -74,7 +75,14 @@ function onUser(u) {
   };
   const a = store.watchLists(u.uid, onLists, loadError);
   const b = store.watchLists(u.uid, (t, r, c) => onLists(t, r, c, true), loadError, true);
-  stopLists = () => { a(); b(); };
+  const c = store.watchProjects(u.uid, onProjects, loadError);
+  stopLists = () => { a(); b(); c(); };
+}
+
+function onProjects(incoming, removed) {
+  incoming.forEach(p => projects.set(p.id, p));
+  removed.forEach(id => projects.delete(id));
+  renderSidebar();
 }
 
 function normalize(l) {
@@ -97,7 +105,7 @@ function onLists(incoming, removed, fromCache, templates = false) {
       lists.set(l.id, l);
       if (l.id === currentId) currentChanged = true;
     } else {
-      local.updatedAt = l.updatedAt; local.sortedAt = l.sortedAt;
+      local.updatedAt = l.updatedAt; local.sortedAt = l.sortedAt; local.projectId = l.projectId;
     }
   }
   for (const id of removed) {
@@ -182,6 +190,7 @@ function askCarryOver() {
   t.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing && !yes.disabled) yes.click(); });
   yes.addEventListener('click', () => {
     const nl = L.carryOver(l, t.value.trim());
+    nl.projectId = l.projectId || null;
     delete flagsBy[l.id];
     touch(l.id); flush(l.id);
     lists.set(nl.id, nl);
@@ -211,9 +220,10 @@ function fromTemplate(t, title) {
   l.sortedAt = t.sortedAt;
   return l;
 }
-function newList() {
+function newList(projectId = null) {
+  const blank = () => { const l = L.makeList(''); l.projectId = projectId; return l; };
   const tpls = sortedTemplates();
-  if (!tpls.length) return addList(L.makeList(''), true);
+  if (!tpls.length) return addList(blank(), true);
   setView('list');
   const area = $('confirmArea'); area.innerHTML = '';
   const c = document.createElement('div'); c.className = 'confirm';
@@ -246,8 +256,9 @@ function newList() {
   yes.addEventListener('click', () => {
     const t = lists.get(pick.value);
     showTaken(false);
-    if (!t) return addList(L.makeList(''), true);
-    addList(fromTemplate(t, title()));
+    if (!t) return addList(blank(), true);
+    const nl = fromTemplate(t, title()); nl.projectId = projectId;
+    addList(nl);
   });
   no.addEventListener('click', () => { area.innerHTML = ''; showTaken(false); });
   c.append(s, pick, day, made, yes, no); area.appendChild(c);
@@ -268,7 +279,7 @@ function askSaveTemplate() {
   const yes = button('Save', 'btn primary');
   const no = button('Cancel', 'btn');
   const check = () => {
-    const taken = titleTaken(t.value, null, true);
+    const taken = titleTaken(t.value, null);
     t.classList.toggle('taken', taken);
     yes.disabled = !t.value.trim() || taken;
     showTaken(taken);
@@ -319,10 +330,10 @@ const sortedTemplates = () => [...lists.values()].filter(l => l.isTemplate)
   .sort((a, b) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }));
 const DONE_OPEN = 'actinerary.completedListsOpen';
 const TPL_OPEN = 'actinerary.templatesOpen';
-// Titles must be unique among lists, and separately among templates.
-const titleTaken = (title, exceptId, templates = false) => {
+// No two lists, templates or projects can share a title.
+const titleTaken = (title, exceptId) => {
   const k = L.titleKey(title);
-  return !!k && [...lists.values()].some(l => l.id !== exceptId && !!l.isTemplate === templates && L.titleKey(l.title) === k);
+  return !!k && [...lists.values(), ...projects.values()].some(l => l.id !== exceptId && L.titleKey(l.title) === k);
 };
 let titleAtFocus = '';
 const TAKEN = 'Title already used.';
@@ -332,8 +343,20 @@ function showTaken(on) {
   renderBanner();
 }
 let query = ''; // the search box; while it has text the sidebar shows only matching lists
+const PROJ_CLOSED = 'actinerary.closedProjects';
+const PROJS_OPEN = 'actinerary.projectsOpen';
+const closedProjects = () => { try { return JSON.parse(store_get(PROJ_CLOSED)) || []; } catch (e) { return []; } };
+const projOf = l => (l.projectId && projects.has(l.projectId) ? l.projectId : null);
+// Projects, A to Z.
+const sortedProjects = () => [...projects.values()]
+  .sort((a, b) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }));
+let projForm = null; // the name box for a new or renamed project, kept across sidebar redraws
+
 function renderSidebar() {
-  const nav = $('lists'); nav.innerHTML = '';
+  const nav = $('lists');
+  const a = document.activeElement, keep = projForm && projForm.contains(a) ? a : null;
+  const sel = keep && keep.tagName === 'INPUT' ? [keep.selectionStart, keep.selectionEnd] : null;
+  nav.innerHTML = '';
   if (!loaded) {
     const p = document.createElement('div'); p.className = 'none';
     p.textContent = 'Loading your lists…';
@@ -344,12 +367,56 @@ function renderSidebar() {
   const searching = !!query.trim();
   const shown = ls => searching ? ls.filter(l => hits.has(l.id)) : ls;
   const all = sortedLists();
-  const openLists = shown(all.filter(l => !l.completedAt)), doneLists = shown(all.filter(l => l.completedAt));
+  const loose = all.filter(l => !projOf(l));
+  const openLists = shown(loose.filter(l => !l.completedAt)), doneLists = shown(loose.filter(l => l.completedAt));
   const tpls = shown(sortedTemplates());
   const none = text => { const p = document.createElement('div'); p.className = 'none'; p.textContent = text; nav.appendChild(p); };
   if (searching && !hits.size) return none('No matches.');
   if (!searching && !all.length) none('No lists yet.');
-  openLists.forEach(l => nav.append(...listLink(l, hits.get(l.id))));
+  // Lists with no project. While dragging a list, this is where to drop it to take it out of a project.
+  const top = document.createElement('div'); top.className = 'drop-zone top-zone'; top.dataset.drop = '';
+  openLists.forEach(l => top.append(...listLink(l, hits.get(l.id))));
+  nav.appendChild(top);
+
+  // Projects: each one collapsible, with its lists indented underneath and its completed lists grayed at the bottom.
+  const projs = sortedProjects().map(p => ({ p, ls: shown(all.filter(l => projOf(l) === p.id)) }))
+    .filter(x => !searching || x.ls.length);
+  const allOpen = searching || store_get(PROJS_OPEN) !== '0'; // the Projects heading starts open
+  if (!searching || projs.length) {
+    const ph = document.createElement('div'); ph.className = 'tpl-head';
+    const pt = button(`${allOpen ? '▾' : '▸'} Projects · ${projs.length}`, 'done-lists-toggle');
+    pt.setAttribute('aria-expanded', String(allOpen));
+    pt.addEventListener('click', () => { store_set(PROJS_OPEN, allOpen ? '0' : '1'); renderSidebar(); });
+    const add = button('+', 'tpl-add'); add.setAttribute('aria-label', 'New project');
+    add.addEventListener('click', () => { store_set(PROJS_OPEN, '1'); editProject(null); });
+    ph.append(pt, add); nav.appendChild(ph);
+    if (projForm && projForm.dataset.project === '') nav.appendChild(projForm);
+  }
+  const closed = closedProjects();
+  for (const { p, ls } of allOpen ? projs : []) {
+    const open = searching || !closed.includes(p.id);
+    const zone = document.createElement('div'); zone.className = 'drop-zone'; zone.dataset.drop = p.id;
+    if (projForm && projForm.dataset.project === p.id) zone.appendChild(projForm);
+    else {
+      const head = document.createElement('div'); head.className = 'tpl-head proj-head';
+      const t = button(`${open ? '▾' : '▸'} `, 'proj-toggle'); t.setAttribute('aria-expanded', String(open));
+      const name = document.createElement('span'); name.textContent = p.title; t.appendChild(name);
+      t.addEventListener('click', () => {
+        const c = closedProjects().filter(id => id !== p.id); if (open) c.push(p.id);
+        store_set(PROJ_CLOSED, JSON.stringify(c)); renderSidebar();
+      });
+      const ed = button('✎', 'tpl-add proj-edit'); ed.setAttribute('aria-label', 'Rename or delete project');
+      ed.addEventListener('click', () => editProject(p.id));
+      const add = button('+', 'tpl-add'); add.setAttribute('aria-label', 'New list in ' + p.title);
+      add.addEventListener('click', () => newList(p.id));
+      head.append(t, ed, add); zone.appendChild(head);
+    }
+    const box = document.createElement('div'); box.className = 'proj-box'; box.hidden = !open;
+    const openLs = ls.filter(l => !l.completedAt), doneLs = ls.filter(l => l.completedAt);
+    [...openLs, ...doneLs].forEach(l => box.append(...listLink(l, hits.get(l.id))));
+    zone.appendChild(box);
+    nav.appendChild(zone);
+  }
 
   // Templates: collapsible, with + to make one from scratch. Search opens every section with matches.
   if (!searching || tpls.length) {
@@ -368,14 +435,67 @@ function renderSidebar() {
 
   if (doneLists.length) {
     const open = searching || store_get(DONE_OPEN) === '1';
+    const zone = document.createElement('div'); zone.className = 'drop-zone'; zone.dataset.drop = '';
     const h = button(`${open ? '▾' : '▸'} Completed Lists · ${doneLists.length}`, 'done-lists-toggle');
     h.setAttribute('aria-expanded', String(open));
     h.addEventListener('click', () => { store_set(DONE_OPEN, open ? '0' : '1'); renderSidebar(); });
     const doneBox = document.createElement('div'); doneBox.hidden = !open;
     doneLists.forEach(l => doneBox.append(...listLink(l, hits.get(l.id))));
-    nav.append(h, doneBox);
+    zone.append(h, doneBox);
+    nav.appendChild(zone);
   }
+  if (keep && document.contains(keep)) { keep.focus(); if (sel) keep.setSelectionRange(...sel); }
 }
+
+// The name box for a new project (id null) or for renaming or deleting one.
+function editProject(id) {
+  const p = id ? projects.get(id) : null;
+  const f = document.createElement('div'); f.className = 'proj-form'; f.dataset.project = id || '';
+  const t = document.createElement('input');
+  t.placeholder = 'Project name'; t.autocomplete = 'off'; t.spellcheck = true; t.setAttribute('autocorrect', 'on');
+  t.value = p ? p.title : '';
+  const save = button('Save', 'btn primary');
+  const del = button('Delete', 'btn quiet danger'); del.hidden = !p;
+  const no = button('Cancel', 'btn quiet');
+  const close = () => { projForm = null; showTaken(false); renderSidebar(); };
+  const check = () => {
+    const taken = titleTaken(t.value, id);
+    t.classList.toggle('taken', taken);
+    save.disabled = !t.value.trim() || taken;
+    showTaken(taken);
+  };
+  t.addEventListener('input', e => { capFirst(t, '', e); check(); });
+  t.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.isComposing && !save.disabled) save.click();
+    if (e.key === 'Escape') close();
+  });
+  save.addEventListener('click', () => {
+    const np = p || { id: L.uid(), createdAt: Date.now() };
+    np.title = t.value.trim(); projects.set(np.id, np);
+    store.saveProject(user.uid, np).catch(saveError);
+    if (!p) { const c = closedProjects().filter(x => x !== np.id); store_set(PROJ_CLOSED, JSON.stringify(c)); }
+    close();
+  });
+  // Deleting a project moves its lists back to no project. Lists are never deleted.
+  del.addEventListener('click', () => {
+    f.innerHTML = '';
+    const s = document.createElement('span'); s.textContent = `Delete project “${L.short(p.title)}”? Its lists stay.`;
+    const yes = button('Delete', 'btn primary'); const back = button('Cancel', 'btn quiet');
+    yes.addEventListener('click', () => {
+      for (const l of lists.values()) if (l.projectId === p.id) { l.projectId = null; touch(l.id); flush(l.id); }
+      projects.delete(p.id); store.removeProject(user.uid, p.id).catch(saveError);
+      close();
+    });
+    back.addEventListener('click', close);
+    f.append(s, yes, back);
+  });
+  no.addEventListener('click', close);
+  f.append(t, save, del, no);
+  projForm = f; renderSidebar();
+  check(); if (!p) showTaken(false);
+  t.focus();
+}
+
 // Text with the search phrase highlighted.
 function marked(el, text) {
   const k = query.trim().toLowerCase(), lower = text.toLowerCase();
@@ -390,15 +510,16 @@ function marked(el, text) {
 // A list's link, plus its matching lines while searching.
 function listLink(l, hit) {
   const b = document.createElement('button');
-  b.type = 'button'; b.className = 'list-link';
+  b.type = 'button'; b.className = 'list-link' + (l.completedAt && projOf(l) ? ' done-l' : '');
   b.setAttribute('aria-current', String(l.id === currentId));
+  if (!l.isTemplate) wireListDrag(b, l);
   const t = document.createElement('span'); t.className = 't' + (l.title.trim() ? '' : ' untitled');
   marked(t, l.title.trim() || 'Untitled');
   const { open, done } = L.counts(l);
   const m = document.createElement('span'); m.className = 'm';
   m.textContent = l.isTemplate ? `${open} item${open === 1 ? '' : 's'}` : `${open} open · ${done} done`;
   b.append(t, m);
-  b.addEventListener('click', () => openList(l.id));
+  b.addEventListener('click', () => { if (!b.dataset.dragged) openList(l.id); delete b.dataset.dragged; });
   const lines = (hit ? hit.lines : []).map(x => {
     const h = button('', 'hit'); marked(h, x.text);
     h.addEventListener('click', () => { openList(l.id); flashItem(x.id); });
@@ -414,6 +535,54 @@ function flashItem(id) {
 }
 
 /* ---------- drag and drop ---------- */
+// A list's title in the sidebar can be dragged onto a project to move it there, or onto the top to take it out.
+// Drag it with a mouse, or press and hold it on a touch screen.
+let listDragOn = false;
+document.addEventListener('touchmove', e => { if (listDragOn) e.preventDefault(); }, { passive: false });
+function wireListDrag(b, l) {
+  b.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
+    const p = { x: e.clientX, y: e.clientY, on: false, timer: null };
+    let zone = null;
+    const zoneAt = (x, y) => { const el = document.elementFromPoint(x, y); return el && el.closest('[data-drop]'); };
+    const over = (x, y) => {
+      const z = zoneAt(x, y);
+      if (z !== zone) { if (zone) zone.classList.remove('drop-into'); zone = z; if (zone) zone.classList.add('drop-into'); }
+      const dy = y < 60 ? -12 : y > innerHeight - 60 ? 12 : 0;
+      if (dy) { $('lists').closest('.sidebar').scrollBy(0, dy); scrollBy(0, dy); }
+    };
+    const begin = () => {
+      p.on = true; listDragOn = true;
+      b.classList.add('dragging'); document.body.classList.add('list-drag-on');
+      if (navigator.vibrate) navigator.vibrate(10);
+      over(p.x, p.y);
+    };
+    const moveH = e => {
+      if (p.on) { e.preventDefault(); return over(e.clientX, e.clientY); }
+      if (Math.hypot(e.clientX - p.x, e.clientY - p.y) < 6) return;
+      if (e.pointerType === 'mouse') { p.x = e.clientX; p.y = e.clientY; begin(); } else stop();
+    };
+    const upH = () => {
+      const done = p.on, to = zone; stop();
+      if (!done) return;
+      b.dataset.dragged = '1'; setTimeout(() => delete b.dataset.dragged, 0);
+      if (!to) return renderSidebar();
+      const pid = to.dataset.drop || null;
+      if ((l.projectId || null) !== pid) { l.projectId = pid; touch(l.id); flush(l.id); }
+      renderSidebar();
+    };
+    function stop() {
+      clearTimeout(p.timer); listDragOn = false;
+      if (zone) zone.classList.remove('drop-into');
+      b.classList.remove('dragging'); document.body.classList.remove('list-drag-on');
+      b.removeEventListener('pointermove', moveH); b.removeEventListener('pointerup', upH); b.removeEventListener('pointercancel', stop);
+    }
+    try { b.setPointerCapture(e.pointerId); } catch (err) {}
+    b.addEventListener('pointermove', moveH); b.addEventListener('pointerup', upH); b.addEventListener('pointercancel', stop);
+    if (e.pointerType !== 'mouse') p.timer = setTimeout(begin, 350);
+  });
+}
+
 // The number box doubles as the drag handle: drag it with a mouse, or press and hold it on a touch screen.
 // Dragging turns on for a list after its first Sort.
 function wireDrag(rk, it, parent, row) {
@@ -675,12 +844,15 @@ $('title').addEventListener('focus', () => { titleAtFocus = cur()?.title || ''; 
 $('title').addEventListener('blur', () => {
   const l = cur(); if (!l || !$('title').classList.contains('taken')) return;
   l.title = titleAtFocus; $('title').value = titleAtFocus; $('title').classList.remove('taken');
-  showTaken(false); touch(); renderSidebar();
+  showTaken(false); touch();
+  // Updated in place: redrawing the sidebar here would swallow a click on it.
+  const link = $('lists').querySelector('.list-link[aria-current="true"] .t');
+  if (link) { link.textContent = titleAtFocus.trim() || 'Untitled'; link.classList.toggle('untitled', !titleAtFocus.trim()); }
 });
 $('title').addEventListener('input', e => {
   const l = cur(); if (!l) return;
   capFirst($('title'), l.title || '', e);
-  const taken = titleTaken($('title').value, l.id, !!l.isTemplate);
+  const taken = titleTaken($('title').value, l.id);
   $('title').classList.toggle('taken', taken);
   showTaken(taken);
   if (taken) return;

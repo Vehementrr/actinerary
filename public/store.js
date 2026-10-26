@@ -1,5 +1,6 @@
 // Firebase: Google sign-in and syncing lists to Firestore.
-// Lists live at users/{uid}/lists/{listId}, templates at users/{uid}/templates/{id}. firestore.rules only lets a signed-in user touch their own folders.
+// Lists live at users/{uid}/lists/{listId}, templates at users/{uid}/templates/{id}, projects at users/{uid}/projects/{id}.
+// firestore.rules only lets a signed-in user touch their own folders.
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
 import {
   getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signInWithRedirect,
@@ -72,10 +73,20 @@ export function watchLists(uid, cb, onError, templates = false) {
 
 // Writes are queued locally first, so these never wait for the network.
 export function saveList(uid, list) {
-  const { id, title, items, createdAt, sortedAt, completedAt } = list;
+  const { id, title, items, createdAt, sortedAt, completedAt, projectId } = list;
   list.updatedAt = Date.now();
   return setDoc(doc(db, 'users', uid, folder(list), id), {
     title: title || '', items: toSaved(items), createdAt: createdAt || list.updatedAt, updatedAt: list.updatedAt, sortedAt, completedAt,
+    ...(list.isTemplate ? {} : { projectId: projectId || null }),
   });
 }
 export const removeList = (uid, list) => deleteDoc(doc(db, 'users', uid, folder(list), list.id));
+
+// Projects only hold a name. Each list stores the id of its project.
+export function watchProjects(uid, cb, onError) {
+  return onSnapshot(collection(db, 'users', uid, 'projects'), snap => {
+    cb(snap.docs.map(d => ({ ...d.data(), id: d.id })), snap.docChanges().filter(c => c.type === 'removed').map(c => c.doc.id));
+  }, onError);
+}
+export const saveProject = (uid, p) => setDoc(doc(db, 'users', uid, 'projects', p.id), { title: p.title, createdAt: p.createdAt });
+export const removeProject = (uid, id) => deleteDoc(doc(db, 'users', uid, 'projects', id));

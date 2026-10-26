@@ -253,14 +253,21 @@ A running log of product and technical decisions for Actinerary: what was decide
 ### 32. Unique list titles
 *10/25/2026*
 
-- **Decision:** No two lists can share a title, ignoring capitals and extra spaces, and completed lists count too. Typing a used title turns it red with "Title already used.", and leaving the box puts the previous title back. In Carry Over, a used title shows the same message and keeps Move grayed out. Blank titles don't count, and existing duplicates stay until edited.
-- **Why:** Duplicate titles could get confusing.
+- **Decision:** No two lists, templates or projects can share a title, ignoring capitals and extra spaces, and completed lists count too. Typing a used title turns it red with "Title already used.", and leaving the box puts the previous title back. In Carry Over, a used title shows the same message and keeps Move grayed out. Blank titles don't count, and existing duplicates stay until edited.
+- **Why:** Duplicate titles could get confusing. This is for data integrity as well as ease of use.
 
 ### 33. Sort and Delete at the bottom
 *10/26/2026*
 
 - **Decision:** A second Sort button sits at the bottom left, under the help text. Delete list moved from the toolbar to the bottom right, and its confirm shows there.
 - **Why:** So the toolbar doesn't get too cluttered. So user doesn't have to scroll back up to the top of a long list in order to use the sort button.
+
+### 35. Projects
+*10/26/2026*
+
+- **Decision:** Lists can be grouped under projects in the sidebar. **+** by the collapsible Projects heading makes a project, and ✎ renames or deletes one. Deleting a project never deletes its lists. Lists sit indented under their project. Completed ones stay there, grayed at the bottom, with no separate header. Drag a list's title onto a project to move it in, or to the top to take it out. A project's **+** makes a new list in it, and Carry Over keeps the project.
+- **Options considered:** A Project dropdown in the bottom row, and a Completed Lists header inside each project.
+- **Why:** I want to be able to manage long running work that requires more than one list in order to keep lists to minimal items that can be checked off in sequence as work is done. Being able to group multiple lists under projects allows you to create a sequence of chunks of work that creates a plan for immediate next steps and keeps the satisfaction factor of checking off items from your list.
 
 ## Search
 
