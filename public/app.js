@@ -167,8 +167,14 @@ function askCarryOver() {
   t.placeholder = 'New list title'; t.autocomplete = 'off'; t.spellcheck = true; t.setAttribute('autocorrect', 'on');
   const yes = button('Move', 'btn primary'); yes.disabled = true;
   const no = button('Cancel', 'btn');
-  t.addEventListener('input', e => { capFirst(t, '', e); yes.disabled = !t.value.trim(); });
-  t.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing && t.value.trim()) yes.click(); });
+  t.addEventListener('input', e => {
+    capFirst(t, '', e);
+    const taken = titleTaken(t.value, null);
+    t.classList.toggle('taken', taken);
+    yes.disabled = !t.value.trim() || taken;
+    showTaken(taken);
+  });
+  t.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing && !yes.disabled) yes.click(); });
   yes.addEventListener('click', () => {
     const nl = L.carryOver(l, t.value.trim());
     delete flagsBy[l.id];
@@ -179,7 +185,7 @@ function askCarryOver() {
     currentId = nl.id; store_set(LAST, nl.id);
     renderSidebar(); renderEditor();
   });
-  no.addEventListener('click', () => { area.innerHTML = ''; });
+  no.addEventListener('click', () => { area.innerHTML = ''; showTaken(false); });
   c.append(s, t, yes, no); area.appendChild(c);
   t.focus();
 }
@@ -222,6 +228,17 @@ const sortedLists = () => [
   ...[...lists.values()].filter(l => l.completedAt).sort((a, b) => b.completedAt - a.completedAt),
 ];
 const DONE_OPEN = 'actinerary.completedListsOpen';
+const titleTaken = (title, exceptId) => {
+  const k = L.titleKey(title);
+  return !!k && [...lists.values()].some(l => l.id !== exceptId && L.titleKey(l.title) === k);
+};
+let titleAtFocus = '';
+const TAKEN = 'Title already used.';
+function showTaken(on) {
+  if (on) banner = { type: 'error', title: TAKEN, msgs: [] };
+  else if (banner && banner.title === TAKEN) banner = null;
+  renderBanner();
+}
 function renderSidebar() {
   const nav = $('lists'); nav.innerHTML = '';
   const all = sortedLists();
@@ -500,9 +517,20 @@ $('completeBtn').addEventListener('click', () => {
   banner = null; touch(l.id); flush(l.id);
   renderSidebar(); renderEditor();
 });
+$('title').addEventListener('focus', () => { titleAtFocus = cur()?.title || ''; });
+// A title that's already used turns red and isn't saved. Leaving the box puts the previous title back.
+$('title').addEventListener('blur', () => {
+  const l = cur(); if (!l || !$('title').classList.contains('taken')) return;
+  l.title = titleAtFocus; $('title').value = titleAtFocus; $('title').classList.remove('taken');
+  showTaken(false); touch(); renderSidebar();
+});
 $('title').addEventListener('input', e => {
   const l = cur(); if (!l) return;
   capFirst($('title'), l.title || '', e);
+  const taken = titleTaken($('title').value, l.id);
+  $('title').classList.toggle('taken', taken);
+  showTaken(taken);
+  if (taken) return;
   l.title = $('title').value; touch();
   const link = $('lists').querySelector('.list-link[aria-current="true"] .t');
   if (link) { link.textContent = l.title.trim() || 'Untitled'; link.classList.toggle('untitled', !l.title.trim()); }

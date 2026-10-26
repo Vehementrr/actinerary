@@ -19,6 +19,8 @@ export const short = t => {
   const s = (t || '').trim() || 'Untitled';
   return s.length > 40 ? s.slice(0, 40) + '…' : s;
 };
+// List titles must be unique, ignoring capitals and extra spaces. Blank titles don't count.
+export const titleKey = t => (t || '').trim().replace(/\s+/g, ' ').toLowerCase();
 export const uid = () => {
   const a = new Uint8Array(8);
   globalThis.crypto.getRandomValues(a);
