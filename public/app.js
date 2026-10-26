@@ -40,6 +40,7 @@ const cur = () => lists.get(currentId) || null;
 const F = () => (flagsBy[currentId] ||= {});
 const sig = l => JSON.stringify([l.title || '', l.items, l.completedAt || null]);
 const viewOnly = () => !!(cur() && cur().completedAt); // completed lists can't be edited until reopened
+const isTpl = () => !!(cur() && cur().isTemplate);
 const store_get = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const store_set = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
 
@@ -65,12 +66,15 @@ function onUser(u) {
   $('userEmail').textContent = u.email || '';
   show('app');
   renderSidebar(); renderEditor();
-  stopLists = store.watchLists(u.uid, onLists, err => {
+  const loadError = err => {
     banner = { type: 'error', title: 'Couldn’t load your lists.', msgs: [err.code === 'permission-denied'
       ? 'Permission denied. Make sure the Firestore rules are deployed (see the README).'
       : (err.message || String(err))] };
     renderBanner();
-  });
+  };
+  const a = store.watchLists(u.uid, onLists, loadError);
+  const b = store.watchLists(u.uid, (t, r, c) => onLists(t, r, c, true), loadError, true);
+  stopLists = () => { a(); b(); };
 }
 
 function normalize(l) {
@@ -83,7 +87,7 @@ function normalize(l) {
   return l;
 }
 
-function onLists(incoming, removed, fromCache) {
+function onLists(incoming, removed, fromCache, templates = false) {
   let currentChanged = false;
   for (const l of incoming) {
     if (timers.has(l.id)) continue; // local edits not yet saved win
@@ -101,15 +105,15 @@ function onLists(incoming, removed, fromCache) {
     lists.delete(id);
     if (id === currentId) { currentId = null; currentChanged = true; }
   }
-  if (!loaded && (incoming.length || !fromCache)) {
+  if (!templates && !loaded && (incoming.length || !fromCache)) {
     loaded = true;
     setView(narrow.matches ? 'index' : 'list');
     currentChanged = true;
   }
   if (currentId && !lists.has(currentId)) { currentId = null; currentChanged = true; }
-  if (!currentId && lists.size) {
+  if (!currentId && loaded && lists.size) {
     const last = store_get(LAST);
-    currentId = lists.has(last) ? last : sortedLists()[0].id;
+    currentId = lists.has(last) ? last : (sortedLists()[0] || sortedTemplates()[0]).id;
     currentChanged = true;
   }
   renderSidebar();
@@ -149,9 +153,10 @@ function apply(r) {
 }
 const blocking = flags => Object.values(flags).some(f => f.kind !== 'none');
 
+const clearConfirms = () => { $('confirmArea').innerHTML = ''; $('bottomConfirm').innerHTML = ''; };
 function openList(id) {
   if (currentId && currentId !== id) flush(currentId);
-  currentId = id; banner = null; $('confirmArea').innerHTML = '';
+  currentId = id; banner = null; clearConfirms();
   store_set(LAST, id);
   setView('list');
   renderSidebar(); renderEditor();
@@ -189,19 +194,99 @@ function askCarryOver() {
   c.append(s, t, yes, no); area.appendChild(c);
   t.focus();
 }
-function newList() {
+// Adds a list or template, saves it and opens it.
+function addList(l, focusTitle) {
   if (currentId) flush(currentId);
-  const l = L.makeList('');
   lists.set(l.id, l);
   store.saveList(user.uid, l).catch(saveError);
-  currentId = l.id; banner = null; store_set(LAST, l.id);
+  currentId = l.id; banner = null; store_set(LAST, l.id); clearConfirms();
   setView('list');
   renderSidebar(); renderEditor();
-  $('title').focus();
+  if (focusTitle) $('title').focus();
+}
+// A new list from a template copies its items, unchecked, and is titled with the template name plus a date.
+function fromTemplate(t, title) {
+  const l = L.makeList(title);
+  if (t.items.length) l.items = L.copyItems(t.items);
+  l.sortedAt = t.sortedAt;
+  return l;
+}
+function newList() {
+  const tpls = sortedTemplates();
+  if (!tpls.length) return addList(L.makeList(''), true);
+  setView('list');
+  const area = $('confirmArea'); area.innerHTML = '';
+  const c = document.createElement('div'); c.className = 'confirm';
+  const s = document.createElement('span'); s.textContent = 'New list from';
+  const pick = document.createElement('select'); pick.setAttribute('aria-label', 'Template');
+  pick.add(new Option('Blank list', ''));
+  tpls.forEach(t => pick.add(new Option(t.title.trim() || 'Untitled', t.id)));
+  const day = document.createElement('input'); day.type = 'date'; day.setAttribute('aria-label', 'Date');
+  const now = new Date();
+  day.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const made = document.createElement('span'); made.className = 'made';
+  const yes = button('Create', 'btn primary');
+  const no = button('Cancel', 'btn');
+  const title = () => {
+    const t = lists.get(pick.value); if (!t) return '';
+    const [y, m, d] = (day.value || '').split('-').map(Number);
+    return [t.title.trim(), y ? L.mmddyyyy(new Date(y, m - 1, d)) : ''].filter(Boolean).join(' ');
+  };
+  const check = () => {
+    const tpl = !!pick.value;
+    day.hidden = made.hidden = !tpl;
+    made.textContent = title();
+    const taken = tpl && titleTaken(title(), null);
+    made.classList.toggle('taken', taken);
+    yes.disabled = tpl && (!day.value || taken);
+    showTaken(taken);
+  };
+  pick.addEventListener('change', check); day.addEventListener('input', check); day.addEventListener('change', check);
+  day.addEventListener('keydown', e => { if (e.key === 'Enter' && !yes.disabled) yes.click(); });
+  yes.addEventListener('click', () => {
+    const t = lists.get(pick.value);
+    showTaken(false);
+    if (!t) return addList(L.makeList(''), true);
+    addList(fromTemplate(t, title()));
+  });
+  no.addEventListener('click', () => { area.innerHTML = ''; showTaken(false); });
+  c.append(s, pick, day, made, yes, no); area.appendChild(c);
+  check(); pick.focus();
+}
+function newTemplate() {
+  const t = L.makeList(''); t.isTemplate = true;
+  addList(t, true);
+}
+function askSaveTemplate() {
+  const l = cur(); if (!l) return;
+  const area = $('confirmArea'); area.innerHTML = '';
+  const c = document.createElement('div'); c.className = 'confirm';
+  const s = document.createElement('span'); s.textContent = 'Save as template?';
+  const t = document.createElement('input');
+  t.placeholder = 'Template name'; t.autocomplete = 'off'; t.spellcheck = true; t.setAttribute('autocorrect', 'on');
+  t.value = L.dropDate(l.title);
+  const yes = button('Save', 'btn primary');
+  const no = button('Cancel', 'btn');
+  const check = () => {
+    const taken = titleTaken(t.value, null, true);
+    t.classList.toggle('taken', taken);
+    yes.disabled = !t.value.trim() || taken;
+    showTaken(taken);
+  };
+  t.addEventListener('input', e => { capFirst(t, '', e); check(); });
+  t.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing && !yes.disabled) yes.click(); });
+  yes.addEventListener('click', () => {
+    const nt = fromTemplate(l, t.value.trim()); nt.isTemplate = true;
+    showTaken(false);
+    addList(nt);
+  });
+  no.addEventListener('click', () => { area.innerHTML = ''; showTaken(false); });
+  c.append(s, t, yes, no); area.appendChild(c);
+  check(); t.focus();
 }
 function askDeleteList() {
   const l = cur(); if (!l) return;
-  const area = $('confirmArea'); area.innerHTML = '';
+  const area = $('bottomConfirm'); area.innerHTML = '';
   const c = document.createElement('div'); c.className = 'confirm';
   const s = document.createElement('span');
   s.textContent = `Delete “${L.short(l.title)}”? This can’t be undone.`;
@@ -210,7 +295,7 @@ function askDeleteList() {
   yes.addEventListener('click', () => {
     clearTimeout(timers.get(l.id)); timers.delete(l.id);
     lists.delete(l.id); delete flagsBy[l.id];
-    store.removeList(user.uid, l.id).catch(saveError);
+    store.removeList(user.uid, l).catch(saveError);
     area.innerHTML = ''; banner = null;
     currentId = sortedLists()[0]?.id || null;
     if (narrow.matches) setView('index');
@@ -218,19 +303,26 @@ function askDeleteList() {
   });
   no.addEventListener('click', () => { area.innerHTML = ''; });
   c.append(s, yes, no); area.appendChild(c);
+  c.scrollIntoView({ block: 'nearest' });
 }
 function setView(v) { $('screen-app').dataset.view = v; }
 
 /* ---------- rendering: sidebar ---------- */
 // Open lists, most recently changed first, then completed lists, most recently completed first.
+const onlyLists = () => [...lists.values()].filter(l => !l.isTemplate);
 const sortedLists = () => [
-  ...[...lists.values()].filter(l => !l.completedAt).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)),
-  ...[...lists.values()].filter(l => l.completedAt).sort((a, b) => b.completedAt - a.completedAt),
+  ...onlyLists().filter(l => !l.completedAt).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)),
+  ...onlyLists().filter(l => l.completedAt).sort((a, b) => b.completedAt - a.completedAt),
 ];
+// Templates, A to Z.
+const sortedTemplates = () => [...lists.values()].filter(l => l.isTemplate)
+  .sort((a, b) => (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }));
 const DONE_OPEN = 'actinerary.completedListsOpen';
-const titleTaken = (title, exceptId) => {
+const TPL_OPEN = 'actinerary.templatesOpen';
+// Titles must be unique among lists, and separately among templates.
+const titleTaken = (title, exceptId, templates = false) => {
   const k = L.titleKey(title);
-  return !!k && [...lists.values()].some(l => l.id !== exceptId && L.titleKey(l.title) === k);
+  return !!k && [...lists.values()].some(l => l.id !== exceptId && !!l.isTemplate === templates && L.titleKey(l.title) === k);
 };
 let titleAtFocus = '';
 const TAKEN = 'Title already used.';
@@ -241,35 +333,55 @@ function showTaken(on) {
 }
 function renderSidebar() {
   const nav = $('lists'); nav.innerHTML = '';
-  const all = sortedLists();
-  if (!all.length) {
+  if (!loaded) {
     const p = document.createElement('div'); p.className = 'none';
-    p.textContent = loaded ? 'No lists yet.' : 'Loading your lists…';
+    p.textContent = 'Loading your lists…';
     nav.appendChild(p); return;
   }
-  const doneLists = all.filter(l => l.completedAt);
-  let doneBox = null;
-  for (const l of all) {
-    if (l.completedAt && !doneBox) {
-      const open = store_get(DONE_OPEN) === '1';
-      const h = button(`${open ? '▾' : '▸'} Completed Lists · ${doneLists.length}`, 'done-lists-toggle');
-      h.setAttribute('aria-expanded', String(open));
-      h.addEventListener('click', () => { store_set(DONE_OPEN, open ? '0' : '1'); renderSidebar(); });
-      doneBox = document.createElement('div'); doneBox.hidden = !open;
-      nav.append(h, doneBox);
-    }
-    const b = document.createElement('button');
-    b.type = 'button'; b.className = 'list-link';
-    b.setAttribute('aria-current', String(l.id === currentId));
-    const t = document.createElement('span'); t.className = 't' + (l.title.trim() ? '' : ' untitled');
-    t.textContent = l.title.trim() || 'Untitled';
-    const { open, done } = L.counts(l);
-    const m = document.createElement('span'); m.className = 'm';
-    m.textContent = `${open} open · ${done} done`;
-    b.append(t, m);
-    b.addEventListener('click', () => openList(l.id));
-    (doneBox || nav).appendChild(b);
+  const all = sortedLists();
+  const openLists = all.filter(l => !l.completedAt), doneLists = all.filter(l => l.completedAt);
+  const tpls = sortedTemplates();
+  if (!all.length) {
+    const p = document.createElement('div'); p.className = 'none';
+    p.textContent = 'No lists yet.'; nav.appendChild(p);
   }
+  openLists.forEach(l => nav.appendChild(listLink(l)));
+
+  // Templates: collapsible, with + to make one from scratch.
+  const tOpen = store_get(TPL_OPEN) === '1';
+  const th = document.createElement('div'); th.className = 'tpl-head';
+  const tt = button(`${tOpen ? '▾' : '▸'} Templates · ${tpls.length}`, 'done-lists-toggle');
+  tt.setAttribute('aria-expanded', String(tOpen));
+  tt.addEventListener('click', () => { store_set(TPL_OPEN, tOpen ? '0' : '1'); renderSidebar(); });
+  const add = button('+', 'tpl-add'); add.setAttribute('aria-label', 'New template');
+  add.addEventListener('click', newTemplate);
+  th.append(tt, add);
+  const tBox = document.createElement('div'); tBox.hidden = !tOpen;
+  tpls.forEach(l => tBox.appendChild(listLink(l)));
+  nav.append(th, tBox);
+
+  if (doneLists.length) {
+    const open = store_get(DONE_OPEN) === '1';
+    const h = button(`${open ? '▾' : '▸'} Completed Lists · ${doneLists.length}`, 'done-lists-toggle');
+    h.setAttribute('aria-expanded', String(open));
+    h.addEventListener('click', () => { store_set(DONE_OPEN, open ? '0' : '1'); renderSidebar(); });
+    const doneBox = document.createElement('div'); doneBox.hidden = !open;
+    doneLists.forEach(l => doneBox.appendChild(listLink(l)));
+    nav.append(h, doneBox);
+  }
+}
+function listLink(l) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'list-link';
+  b.setAttribute('aria-current', String(l.id === currentId));
+  const t = document.createElement('span'); t.className = 't' + (l.title.trim() ? '' : ' untitled');
+  t.textContent = l.title.trim() || 'Untitled';
+  const { open, done } = L.counts(l);
+  const m = document.createElement('span'); m.className = 'm';
+  m.textContent = l.isTemplate ? `${open} item${open === 1 ? '' : 's'}` : `${open} open · ${done} done`;
+  b.append(t, m);
+  b.addEventListener('click', () => openList(l.id));
+  return b;
 }
 
 /* ---------- drag and drop ---------- */
@@ -339,7 +451,7 @@ function rowEl(it, parent, flags) {
   const cb = document.createElement('button');
   cb.className = 'check'; cb.type = 'button'; cb.innerHTML = CHECK;
   cb.setAttribute('aria-label', (it.done ? 'Uncheck ' : 'Check off ') + L.short(it.text));
-  cb.disabled = viewOnly();
+  cb.disabled = viewOnly() || isTpl(); // template checkboxes are just for looks
   cb.addEventListener('click', () => {
     const flagsNow = F();
     const r = L.toggle(cur(), it.id, flagsNow);
@@ -396,6 +508,8 @@ function rowEl(it, parent, flags) {
 
 function syncCompleteBtn() {
   const l = cur(), b = $('completeBtn'), ro = viewOnly();
+  ['completeBtn', 'carryBtn', 'saveTplBtn'].forEach(id => { $(id).hidden = isTpl(); });
+  $('saveTplBtn').disabled = !l;
   b.textContent = ro ? 'Reopen list' : 'Complete List';
   b.disabled = !l || (!ro && !L.allChecked(l));
   $('carryBtn').disabled = !l || ro || !L.counts(l).open;
@@ -406,7 +520,10 @@ function renderEditor(keepFocus) {
   const has = !!l;
   $('emptyState').hidden = has || !loaded;
   $('paper').hidden = !has;
-  ['sortBtn', 'indentBtn', 'outdentBtn', 'deleteListBtn'].forEach(id => { $(id).disabled = !has || (id !== 'deleteListBtn' && viewOnly()); });
+  ['sortBtn', 'sortBtn2', 'indentBtn', 'outdentBtn', 'deleteListBtn'].forEach(id => { $(id).disabled = !has || (id !== 'deleteListBtn' && viewOnly()); });
+  $('bottomBar').hidden = !has;
+  $('deleteListBtn').textContent = isTpl() ? 'Delete template' : 'Delete list';
+  $('paper').classList.toggle('tpl', isTpl());
   syncCompleteBtn();
   $('title').readOnly = viewOnly(); $('addBtn').hidden = viewOnly();
   if (!has) { $('list').innerHTML = ''; $('doneList').innerHTML = ''; renderBanner(); return; }
@@ -500,14 +617,17 @@ $('newListBtn').addEventListener('click', newList);
 $('emptyNewBtn').addEventListener('click', newList);
 $('deleteListBtn').addEventListener('click', askDeleteList);
 $('carryBtn').addEventListener('click', askCarryOver);
-$('backBtn').addEventListener('click', () => { if (currentId) flush(currentId); banner = null; setView('index'); renderSidebar(); });
-$('sortBtn').addEventListener('click', () => {
+$('backBtn').addEventListener('click', () => { if (currentId) flush(currentId); banner = null; clearConfirms(); setView('index'); renderSidebar(); });
+const sortNow = () => {
   const l = cur(); if (!l) return;
   const r = L.sortList(l);
   flagsBy[l.id] = r.flags;
   if (!l.sortedAt) { l.sortedAt = Date.now(); r.changed = true; } // turns on dragging
   apply({ changed: r.changed, banner: r.banner });
-});
+};
+$('sortBtn').addEventListener('click', sortNow);
+$('sortBtn2').addEventListener('click', sortNow);
+$('saveTplBtn').addEventListener('click', askSaveTemplate);
 $('addBtn').addEventListener('click', () => { const l = cur(); if (l) apply(L.addAtEnd(l)); });
 $('completeBtn').addEventListener('click', () => {
   const l = cur(); if (!l) return;
@@ -527,7 +647,7 @@ $('title').addEventListener('blur', () => {
 $('title').addEventListener('input', e => {
   const l = cur(); if (!l) return;
   capFirst($('title'), l.title || '', e);
-  const taken = titleTaken($('title').value, l.id);
+  const taken = titleTaken($('title').value, l.id, !!l.isTemplate);
   $('title').classList.toggle('taken', taken);
   showTaken(taken);
   if (taken) return;

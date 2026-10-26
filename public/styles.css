@@ -172,6 +172,17 @@ body.drag-on, body.drag-on * { cursor: grabbing; user-select: none; -webkit-user
 .add:hover { color: var(--accent); }
 
 .help { color: var(--muted); font-size: 14px; margin-top: 14px; display: grid; gap: 4px; }
+.bottom-bar { display: flex; gap: 8px; align-items: center; margin-top: 14px; }
+.bottom-bar .spacer { flex: 1; }
+#bottomConfirm .confirm { margin: 14px 0 0; }
+.confirm select { font: inherit; color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+.confirm input[type="date"] { flex: 0 1 auto; }
+.confirm .made { flex: 1 1 100%; color: var(--muted); }
+.paper.tpl .check { cursor: default; }
+.tpl-head { display: flex; align-items: center; }
+.tpl-head .done-lists-toggle { flex: 1; }
+.tpl-add { background: transparent; border: 0; color: var(--muted); font: inherit; font-size: 18px; font-weight: 700; line-height: 1; padding: 10px 10px 2px; }
+.tpl-add:hover { color: var(--ink); }
 .help kbd { font-family: inherit; font-size: 12px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: var(--paper); }
 
 /* ---------- phones: one screen at a time ---------- */
@@ -189,3 +200,4 @@ body.drag-on, body.drag-on * { cursor: grabbing; user-select: none; -webkit-user
   .children { margin-left: 22px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+.confirm .made.taken { color: var(--err); }

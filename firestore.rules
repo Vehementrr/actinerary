@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Each person's lists live under users/{their account id}/lists.
+// Each person's lists live under users/{their account id}/lists, and their templates under users/{their account id}/templates.
 // A request is allowed only when it comes from a signed-in user whose account id matches that folder.
 // Everything else, including anyone who isn't signed in, is refused by Google's servers.
 service cloud.firestore {
@@ -10,6 +10,14 @@ service cloud.firestore {
       allow create, update: if request.auth != null
         && request.auth.uid == userId
         && request.resource.data.keys().hasOnly(['title', 'items', 'createdAt', 'updatedAt', 'sortedAt', 'completedAt'])
+        && request.resource.data.title is string
+        && request.resource.data.items is list;
+    }
+    match /users/{userId}/templates/{templateId} {
+      allow read, delete: if request.auth != null && request.auth.uid == userId;
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['title', 'items', 'createdAt', 'updatedAt', 'sortedAt'])
         && request.resource.data.title is string
         && request.resource.data.items is list;
     }

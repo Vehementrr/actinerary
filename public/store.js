@@ -1,5 +1,5 @@
 // Firebase: Google sign-in and syncing lists to Firestore.
-// Lists live at users/{uid}/lists/{listId}. firestore.rules only lets a signed-in user touch their own folder.
+// Lists live at users/{uid}/lists/{listId}, templates at users/{uid}/templates/{id}. firestore.rules only lets a signed-in user touch their own folders.
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
 import {
   getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signInWithRedirect,
@@ -58,12 +58,13 @@ export async function signIn() {
 }
 export const signOutUser = () => signOut(auth);
 
-const listsCol = uid => collection(db, 'users', uid, 'lists');
+// Lists live in users/{uid}/lists, templates in users/{uid}/templates. Older app versions only read lists.
+const folder = list => list.isTemplate ? 'templates' : 'lists';
 
-// Calls cb(lists, removedIds) whenever lists change on any device.
-export function watchLists(uid, cb, onError) {
-  return onSnapshot(listsCol(uid), snap => {
-    const lists = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+// Calls cb(lists, removedIds) whenever lists (or templates) change on any device.
+export function watchLists(uid, cb, onError, templates = false) {
+  return onSnapshot(collection(db, 'users', uid, templates ? 'templates' : 'lists'), snap => {
+    const lists = snap.docs.map(d => ({ ...d.data(), id: d.id, ...(templates ? { isTemplate: true } : {}) }));
     const removed = snap.docChanges().filter(c => c.type === 'removed').map(c => c.doc.id);
     cb(lists, removed, snap.metadata.fromCache);
   }, onError);
@@ -73,8 +74,8 @@ export function watchLists(uid, cb, onError) {
 export function saveList(uid, list) {
   const { id, title, items, createdAt, sortedAt, completedAt } = list;
   list.updatedAt = Date.now();
-  return setDoc(doc(db, 'users', uid, 'lists', id), {
+  return setDoc(doc(db, 'users', uid, folder(list), id), {
     title: title || '', items: toSaved(items), createdAt: createdAt || list.updatedAt, updatedAt: list.updatedAt, sortedAt, completedAt,
   });
 }
-export const removeList = (uid, id) => deleteDoc(doc(db, 'users', uid, 'lists', id));
+export const removeList = (uid, list) => deleteDoc(doc(db, 'users', uid, folder(list), list.id));

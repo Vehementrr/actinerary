@@ -152,13 +152,14 @@ A running log of product and technical decisions for Actinerary: what was decide
 - **Options considered:** Leaving sign-in on the original firebaseapp.com address.
 - **Why:** With sign-in on the old address, the iPhone home-screen app installed from actinerary.app couldn't sign in, and Google's sign-in screen showed "continue to actionary-b6dff…", which exposed the old project ID.
 
-## Templates and Completed Lists (specified, not yet built)
+## Templates and Completed Lists
 
 ### 20. Templates
 *10/22/2026*
+*Built in v1.11 on 10/26/2026.*
 
 - **Decision:**
-  - Templates are reusable lists in their own collapsible sidebar section. They're edited like a list, including Sort, but have no checkboxes.
+  - Templates are reusable lists in their own collapsible sidebar section. They're edited like a list, including Sort, but their checkboxes can't be checked.
   - Create one from scratch with **+** next to the Templates heading, or from any list with **Save as template**, which drops a trailing date from the name.
   - **+ New list** offers a blank list or any template. You pick the date (default today), and the new list is titled with the template name plus the date in MM/DD/YYYY format, like "Morning Routine 10/22/2026."
   - Editing a template only affects lists created afterward.
@@ -254,3 +255,9 @@ A running log of product and technical decisions for Actinerary: what was decide
 
 - **Decision:** No two lists can share a title, ignoring capitals and extra spaces, and completed lists count too. Typing a used title turns it red with "Title already used.", and leaving the box puts the previous title back. In Carry Over, a used title shows the same message and keeps Move grayed out. Blank titles don't count, and existing duplicates stay until edited.
 - **Why:** Duplicate titles could get confusing.
+
+### 33. Sort and Delete at the bottom
+*10/26/2026*
+
+- **Decision:** A second Sort button sits at the bottom left, under the help text. Delete list moved from the toolbar to the bottom right, and its confirm shows there.
+- **Why:** So the toolbar doesn't get too cluttered. So user doesn't have to scroll back up to the top of a long list in order to use the sort button.

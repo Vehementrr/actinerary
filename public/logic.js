@@ -76,6 +76,19 @@ export function carryOver(list, title) {
   return nl;
 }
 
+// Templates: a copy of a list's items, all unchecked, with new ids.
+export function copyItems(items) {
+  const one = (x, isChild) => {
+    const n = makeItem(x.text, isChild); n.rank = x.rank ?? null;
+    if (!isChild) n.children = (x.children || []).map(c => one(c, true));
+    return n;
+  };
+  return items.map(x => one(x, false));
+}
+// "Morning Routine 10/22/2026" -> "Morning Routine"
+export const dropDate = t => (t || '').replace(/\s*\d{1,2}\/\d{1,2}\/\d{4}\s*$/, '').trim();
+export const mmddyyyy = d => `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
+
 const rankKey = x => x.rank ?? Infinity;
 const remove = (arr, it) => { const i = arr.indexOf(it); if (i > -1) arr.splice(i, 1); };
 const err = (title, msgs = []) => ({ type: 'error', title, msgs });
